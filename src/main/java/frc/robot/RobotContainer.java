@@ -16,20 +16,27 @@ package frc.robot;
 import static edu.wpi.first.units.Units.*;
 import static edu.wpi.first.units.Units.Degrees;
 import static frc.robot.subsystems.vision.VisionConstants.*;
-import static frc.robot.subsystems.vision.VisionConstants.robotToCamera1;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants.ArmConstants.ArmState;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.arm.Arm;
+import frc.robot.subsystems.arm.ArmIO;
+import frc.robot.subsystems.arm.ArmIOReal;
+import frc.robot.subsystems.arm.ArmIOSim;
 import frc.robot.subsystems.drive.*;
 import frc.robot.subsystems.vision.*;
 import org.ironmaple.simulation.SimulatedArena;
@@ -47,11 +54,15 @@ public class RobotContainer {
     // Subsystems
     private final Drive drive;
     private final Vision vision;
+    private final Arm arm;
+
+    public final RobotVisualizer visualizer;
 
     private SwerveDriveSimulation driveSimulation = null;
 
     // Controller
-    private final CommandXboxController controller = new CommandXboxController(0);
+    public static final CommandXboxController controller = new CommandXboxController(0);
+    public static final CommandXboxController opController = new CommandXboxController(1);
 
     // Dashboard inputs
     private final LoggedDashboardChooser<Command> autoChooser;
@@ -72,6 +83,7 @@ public class RobotContainer {
                         drive,
                         new VisionIOLimelight(VisionConstants.camera0Name, drive::getRotation),
                         new VisionIOLimelight(VisionConstants.camera1Name, drive::getRotation));
+                arm = new Arm(new ArmIOReal());
 
                 break;
             case SIM:
@@ -91,11 +103,13 @@ public class RobotContainer {
                                 TunerConstants.BackRight, driveSimulation.getModules()[3]),
                         driveSimulation::setSimulationWorldPose);
                 vision = new Vision(
-                        drive,
-                        new VisionIOPhotonVisionSim(
-                                camera0Name, robotToCamera0, driveSimulation::getSimulatedDriveTrainPose),
-                        new VisionIOPhotonVisionSim(
-                                camera1Name, robotToCamera1, driveSimulation::getSimulatedDriveTrainPose));
+                        drive // ,
+                        // new VisionIOPhotonVisionSim(
+                        //         camera0Name, robotToCamera0, driveSimulation::getSimulatedDriveTrainPose),
+                        // new VisionIOPhotonVisionSim(
+                        //         camera1Name, robotToCamera1, driveSimulation::getSimulatedDriveTrainPose)
+                        );
+                arm = new Arm(new ArmIOSim());
 
                 break;
 
@@ -109,6 +123,7 @@ public class RobotContainer {
                         new ModuleIO() {},
                         (pose) -> {});
                 vision = new Vision(drive, new VisionIO() {}, new VisionIO() {});
+                arm = new Arm(new ArmIO() {});
 
                 break;
         }
@@ -126,8 +141,16 @@ public class RobotContainer {
         autoChooser.addOption("Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
         autoChooser.addOption("Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
+        visualizer = new RobotVisualizer(
+                arm::getPivotAngleRads,
+                arm::getExtensionLengthMeters,
+                arm::getWristAngleRads,
+                driveSimulation::getSimulatedDriveTrainPose);
+
         // Configure the button bindings
         configureButtonBindings();
+
+        DriverStation.silenceJoystickConnectionWarning(Robot.isSimulation());
     }
 
     /**
@@ -140,14 +163,14 @@ public class RobotContainer {
         drive.setDefaultCommand(DriveCommands.joystickDrive(
                 drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> -controller.getRightX()));
 
-        // Lock to 0° when A button is held
-        controller
-                .a()
-                .whileTrue(DriveCommands.joystickDriveAtAngle(
-                        drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> new Rotation2d()));
+        // // Lock to 0° when A button is held
+        // controller
+        //         .a()
+        //         .whileTrue(DriveCommands.joystickDriveAtAngle(
+        //                 drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> new Rotation2d()));
 
-        // Switch to X pattern when X button is pressed
-        controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+        // // Switch to X pattern when X button is pressed
+        // controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
         // Reset gyro / odometry
         final Runnable resetGyro = Constants.currentMode == Constants.Mode.SIM
@@ -157,19 +180,22 @@ public class RobotContainer {
                 : () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), new Rotation2d())); // zero gyro
         controller.start().onTrue(Commands.runOnce(resetGyro, drive).ignoringDisable(true));
 
+        controller.y().onTrue(new InstantCommand(() -> arm.incrementArmState()));
+        controller.b().onTrue(new InstantCommand(() -> arm.setState(ArmState.L3)));
+
         // Example Coral Placement Code
         // TODO: delete these code for your own project
         if (Constants.currentMode == Constants.Mode.SIM) {
             // L4 placement
-            controller.y().onTrue(Commands.runOnce(() -> SimulatedArena.getInstance()
-                    .addGamePieceProjectile(new ReefscapeCoralOnFly(
-                            driveSimulation.getSimulatedDriveTrainPose().getTranslation(),
-                            new Translation2d(0.4, 0),
-                            driveSimulation.getDriveTrainSimulatedChassisSpeedsFieldRelative(),
-                            driveSimulation.getSimulatedDriveTrainPose().getRotation(),
-                            Meters.of(2),
-                            MetersPerSecond.of(1.5),
-                            Degrees.of(-80)))));
+            //     controller.y().onTrue(Commands.runOnce(() -> SimulatedArena.getInstance()
+            //             .addGamePieceProjectile(new ReefscapeCoralOnFly(
+            //                     driveSimulation.getSimulatedDriveTrainPose().getTranslation(),
+            //                     new Translation2d(0.4, 0),
+            //                     driveSimulation.getDriveTrainSimulatedChassisSpeedsFieldRelative(),
+            //                     driveSimulation.getSimulatedDriveTrainPose().getRotation(),
+            //                     Meters.of(2),
+            //                     MetersPerSecond.of(1.5),
+            //                     Degrees.of(-80)))));
             // L3 placement
             controller.b().onTrue(Commands.runOnce(() -> SimulatedArena.getInstance()
                     .addGamePieceProjectile(new ReefscapeCoralOnFly(
@@ -203,7 +229,7 @@ public class RobotContainer {
         if (Constants.currentMode != Constants.Mode.SIM) return;
 
         SimulatedArena.getInstance().simulationPeriodic();
-        Logger.recordOutput("FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
+        Logger.recordOutput("FieldSimulation/Pose", new Pose3d(driveSimulation.getSimulatedDriveTrainPose()));
         Logger.recordOutput(
                 "FieldSimulation/Coral", SimulatedArena.getInstance().getGamePiecesArrayByType("Coral"));
         Logger.recordOutput(
