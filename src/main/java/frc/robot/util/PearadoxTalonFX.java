@@ -1,62 +1,87 @@
 package frc.robot.util;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 
-/** Add your docs here. */
+/**
+ * PearadoxTalonFX is a wrapper around the CTRE TalonFX motor controller. It applies configuration, optimizes CAN bus
+ * usage, and provides structured access to telemetry.
+ */
 public class PearadoxTalonFX extends TalonFX {
-    /**
-     * Creates a new TalonFX with the necessary configurations.
-     *
-     * @param deviceId The device ID.
-     * @param mode The neutral mode (Brake/Coast).
-     * @param limit The current limit.
-     * @param isInverted The invert type of the motor.
-     */
-    public PearadoxTalonFX(int deviceId, NeutralModeValue mode, int limit, boolean isInverted) {
-        this(deviceId, mode, limit, limit, isInverted);
-    }
+
+    private final BaseStatusSignal[] telemetrySignals;
 
     /**
-     * Creates a new TalonFX with the necessary configurations.
+     * Constructs a new PearadoxTalonFX with the specified device ID and configuration.
      *
-     * @param deviceId The device ID.
-     * @param mode The neutral mode (Brake/Coast).
-     * @param stator The stator current limit.
-     * @param supply The supply current limit.
-     * @param isInverted The invert type of the motor.
+     * @param deviceId CAN device ID for the TalonFX
+     * @param config TalonFXConfiguration to apply
      */
-    public PearadoxTalonFX(int deviceId, NeutralModeValue mode, int supply, int stator, boolean isInverted) {
+    public PearadoxTalonFX(int deviceId, TalonFXConfiguration config) {
         super(deviceId);
-        TalonFXConfiguration config = new TalonFXConfiguration();
+        applyConfig(config);
 
-        config.MotorOutput.NeutralMode = mode;
-        config.MotorOutput.Inverted =
-                isInverted ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
-        config.CurrentLimits.StatorCurrentLimit = supply;
-        config.CurrentLimits.StatorCurrentLimitEnable = true;
-        config.CurrentLimits.SupplyCurrentLimit = stator;
-        config.CurrentLimits.SupplyCurrentLimitEnable = true;
-        // config.CurrentLimits.SupplyCurrentLowerLimit = limit / 2; // prevent breaker trips
-        // config.CurrentLimits.SupplyCurrentLowerTime = 1;
+        telemetrySignals = new BaseStatusSignal[] {
+            getPosition(), getVelocity(), getMotorVoltage(), getSupplyCurrent(), getStatorCurrent(), getDeviceTemp()
+        };
 
-        this.getConfigurator().apply(config);
+        BaseStatusSignal.setUpdateFrequencyForAll(50, telemetrySignals);
+
+        this.optimizeBusUtilization();
+
+        PhoenixUtil.registerSignals(false, telemetrySignals);
     }
 
-    public void setCurrentLimit(double limit) {
-        setCurrentLimits(limit, limit);
+    /**
+     * Applies the given configuration to this motor controller, retrying up to 5 times in case of transient failures.
+     *
+     * @param config TalonFXConfiguration to apply
+     */
+    public void applyConfig(TalonFXConfiguration config) {
+        PhoenixUtil.tryUntilOk(5, () -> this.getConfigurator().apply(config, 0.25));
     }
 
-    public void setCurrentLimits(double supply, double stator) {
-        CurrentLimitsConfigs currentLimitsConfigs = new CurrentLimitsConfigs();
-        currentLimitsConfigs.withSupplyCurrentLimitEnable(true);
-        currentLimitsConfigs.withSupplyCurrentLimit(supply);
-        currentLimitsConfigs.withStatorCurrentLimitEnable(true);
-        currentLimitsConfigs.withStatorCurrentLimit(stator);
+    /**
+     * Retrieves key telemetry from this motor, including a connectivity flag.
+     *
+     * @return MotorData with position, velocity, voltage, currents, temperature, and isConnected
+     */
+    public MotorData getData() {
+        boolean connected = BaseStatusSignal.isAllGood(telemetrySignals);
 
-        this.getConfigurator().apply(currentLimitsConfigs);
+        return new MotorData(
+                telemetrySignals[0].getValueAsDouble(), // position
+                telemetrySignals[1].getValueAsDouble(), // velocity
+                telemetrySignals[2].getValueAsDouble(), // voltage
+                telemetrySignals[3].getValueAsDouble(), // supply current
+                telemetrySignals[4].getValueAsDouble(), // stator current
+                telemetrySignals[5].getValueAsDouble(), // temperature
+                connected);
+    }
+
+    /**
+     * Record representing a snapshot of TalonFX telemetry.
+     *
+     * @param position Sensor position (rotations)
+     * @param velocity Sensor velocity (rotations/sec)
+     * @param appliedVolts Voltage applied to motor
+     * @param supplyCurrent Current drawn from supply (A)
+     * @param statorCurrent Current through motor windings (A)
+     * @param temperature Temperature in °C
+     * @param isConnected True if all status signals are valid and connected
+     */
+    public record MotorData(
+            double position,
+            double velocity,
+            double appliedVolts,
+            double supplyCurrent,
+            double statorCurrent,
+            double temperature,
+            boolean isConnected) {
+
+        public MotorData() {
+            this(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false);
+        }
     }
 }

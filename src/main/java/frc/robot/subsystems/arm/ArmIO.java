@@ -1,36 +1,23 @@
 package frc.robot.subsystems.arm;
 
+import frc.robot.util.PearadoxTalonFX.MotorData;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ArmIO {
     @AutoLog
-    public static class ArmIOInputs {
-        public double pivotPositionRots = 0.0;
-        public double pivotVelocityRps = 0.0;
-        public double pivotAppliedVolts = 0.0;
-        public double pivotStatorCurrent = 0.0;
-        public double pivotSupplyCurrent = 0.0;
-
-        public double extensionPositionRots = 0.0;
-        public double extensionVelocityRps = 0.0;
-        public double extensionAppliedVolts = 0.0;
-        public double extensionStatorCurrent = 0.0;
-        public double extensionSupplyCurrent = 0.0;
-
-        public double wristPositionRots = 0.0;
-        public double wristVelocityRps = 0.0;
-        public double wristAppliedVolts = 0.0;
-        public double wristStatorCurrent = 0.0;
-        public double wristSupplyCurrent = 0.0;
+    static class ArmIOInputs {
+        public MotorData pivotData = new MotorData();
+        public MotorData extensionData = new MotorData();
+        public MotorData wristData = new MotorData();
     }
 
     default void updateInputs(ArmIOInputs inputs) {}
 
-    default void setPivotSetpoint(double setpointRads) {}
+    default void setPivotSetpoint(double setpointRots) {}
 
-    default void setExtensionSetpoint(double setpointMeters) {}
+    default void setExtensionSetpoint(double setpointRots) {}
 
-    default void setWristSetpoint(double setpointRads) {}
+    default void setWristSetpoint(double setpointRots) {}
 
     default void setPivotVolts(double volts) {}
 

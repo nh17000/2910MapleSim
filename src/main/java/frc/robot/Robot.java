@@ -16,6 +16,8 @@ package frc.robot;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.util.LoggedTracer;
+import frc.robot.util.PhoenixUtil;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -62,6 +64,7 @@ public class Robot extends LoggedRobot {
             case SIM:
                 // Running a physics simulator, log to NT
                 Logger.addDataReceiver(new NT4Publisher());
+                // Logger.addDataReceiver(new WPILOGWriter("C:/Users/theon/Coding/PearadoxReefscape/lgos/2910/"));
                 break;
 
             case REPLAY:
@@ -84,6 +87,11 @@ public class Robot extends LoggedRobot {
     /** This function is called periodically during all modes. */
     @Override
     public void robotPeriodic() {
+        // Refresh all Phoenix signals
+        LoggedTracer.reset();
+        PhoenixUtil.refreshAll();
+        LoggedTracer.record("PhoenixRefresh");
+
         // Switch thread to high priority to improve loop timing
         Threads.setCurrentThreadPriority(true, 99);
 

@@ -4,11 +4,18 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.ArmConstants;
 import frc.robot.Constants.ArmConstants.ArmState;
+import lombok.Getter;
+import lombok.Setter;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Arm extends SubsystemBase {
-    private ArmState armState = ArmState.STOWED;
+    @AutoLogOutput
+    @Getter
+    @Setter
+    private ArmState state = ArmState.STOWED;
 
+    @AutoLogOutput
     private int i = 1;
 
     private ArmIO io;
@@ -23,28 +30,13 @@ public class Arm extends SubsystemBase {
         io.updateInputs(inputs);
         Logger.processInputs("Arm", inputs);
 
-        io.setPivotSetpoint(getPivotMotorRots(armState.pivotRads));
-        io.setExtensionSetpoint(getExtensionMotorRots(armState.extensionMeters));
-        io.setWristSetpoint(getWristMotorRots(armState.wristRads));
+        io.setPivotSetpoint(getPivotMotorRots(state.position.getPivotRads()));
+        io.setExtensionSetpoint(getExtensionMotorRots(state.position.getExtensionMeters()));
+        io.setWristSetpoint(getWristMotorRots(state.position.getWristRads()));
 
-        Logger.recordOutput("Arm/State", armState.toString());
-
-        Logger.recordOutput("Arm/Pivot Ang Rads", getPivotAngleRads());
-        Logger.recordOutput("Arm/Pivot Setpoint Rots", getPivotMotorRots(armState.pivotRads));
-
-        Logger.recordOutput("Arm/Extension Meters", getExtensionLengthMeters());
-        Logger.recordOutput("Arm/Extension Setpoint Rots", getExtensionMotorRots(armState.extensionMeters));
-
-        Logger.recordOutput("Arm/Wrist Ang Rads", getWristAngleRads());
-        Logger.recordOutput("Arm/Wrist Setpoint Rots", getWristMotorRots(armState.wristRads));
-    }
-
-    public ArmState getState() {
-        return armState;
-    }
-
-    public void setState(ArmState state) {
-        this.armState = state;
+        Logger.recordOutput("Arm/Pivot Setpoint Rots", getPivotMotorRots(state.position.getPivotRads()));
+        Logger.recordOutput("Arm/Extension Setpoint Rots", getExtensionMotorRots(state.position.getExtensionMeters()));
+        Logger.recordOutput("Arm/Wrist Setpoint Rots", getWristMotorRots(state.position.getWristRads()));
     }
 
     public void incrementArmState() {
@@ -52,17 +44,24 @@ public class Arm extends SubsystemBase {
         if (i == ArmState.values().length) i = 0;
     }
 
+    @AutoLogOutput
     public double getPivotAngleRads() {
-        return Units.rotationsToRadians(inputs.pivotPositionRots) / ArmConstants.PIVOT_GEAR_RATIO;
+        return Units.rotationsToRadians(inputs.pivotData.position()) / ArmConstants.PIVOT_GEAR_RATIO;
     }
 
+    @AutoLogOutput
     public double getExtensionLengthMeters() {
-        return (Units.rotationsToRadians(inputs.extensionPositionRots) / ArmConstants.EXTENSION_GEAR_RATIO)
+        return (Units.rotationsToRadians(inputs.extensionData.position()) / ArmConstants.EXTENSION_GEAR_RATIO)
                 * ArmConstants.EXTENSION_DRUM_RADIUS;
     }
 
+    @AutoLogOutput
     public double getWristAngleRads() {
-        return Units.rotationsToRadians(inputs.wristPositionRots) / ArmConstants.WRIST_GEAR_RATIO;
+        return Units.rotationsToRadians(inputs.wristData.position()) / ArmConstants.WRIST_GEAR_RATIO;
+    }
+
+    public ArmPosition getArmPosition() {
+        return new ArmPosition(getPivotAngleRads(), getExtensionLengthMeters(), getWristAngleRads());
     }
 
     public static double getPivotMotorRots(double pivotAngleRads) {

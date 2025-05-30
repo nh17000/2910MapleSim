@@ -9,9 +9,9 @@ import edu.wpi.first.wpilibj.simulation.VariableLengthArmSim;
 import frc.robot.Constants.ArmConstants;
 
 public class ArmIOSim extends ArmIOTalonFX {
-    private TalonFXSimState pivotSimState;
-    private TalonFXSimState extensionSimState;
-    private TalonFXSimState wristSimState;
+    private final TalonFXSimState pivotSimState;
+    private final TalonFXSimState extensionSimState;
+    private final TalonFXSimState wristSimState;
 
     private final VariableLengthArmSim variableLengthArmSim = new VariableLengthArmSim(
             DCMotor.getKrakenX60(3),

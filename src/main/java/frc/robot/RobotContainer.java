@@ -13,24 +13,24 @@
 
 package frc.robot;
 
-import static edu.wpi.first.units.Units.*;
-import static edu.wpi.first.units.Units.Degrees;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ArmConstants.ArmState;
+import frc.robot.commands.AutoAlign;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.arm.Arm;
@@ -38,10 +38,13 @@ import frc.robot.subsystems.arm.ArmIO;
 import frc.robot.subsystems.arm.ArmIOReal;
 import frc.robot.subsystems.arm.ArmIOSim;
 import frc.robot.subsystems.drive.*;
+import frc.robot.subsystems.endeffector.EndEffector;
+import frc.robot.subsystems.endeffector.EndEffectorIO;
+import frc.robot.subsystems.endeffector.EndEffectorIOReal;
+import frc.robot.subsystems.endeffector.EndEffectorIOSim;
 import frc.robot.subsystems.vision.*;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoralOnFly;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -55,8 +58,10 @@ public class RobotContainer {
     private final Drive drive;
     private final Vision vision;
     private final Arm arm;
+    private final EndEffector endEffector;
 
     public final RobotVisualizer visualizer;
+    public final AutoAlign align;
 
     private SwerveDriveSimulation driveSimulation = null;
 
@@ -84,6 +89,8 @@ public class RobotContainer {
                         new VisionIOLimelight(VisionConstants.camera0Name, drive::getRotation),
                         new VisionIOLimelight(VisionConstants.camera1Name, drive::getRotation));
                 arm = new Arm(new ArmIOReal());
+                endEffector = new EndEffector(new EndEffectorIOReal());
+                align = new AutoAlign(drive::getPose);
 
                 break;
             case SIM:
@@ -110,6 +117,9 @@ public class RobotContainer {
                         //         camera1Name, robotToCamera1, driveSimulation::getSimulatedDriveTrainPose)
                         );
                 arm = new Arm(new ArmIOSim());
+                endEffector = new EndEffector(new EndEffectorIOSim(
+                        driveSimulation, () -> arm.getArmPosition().getWristTransform()));
+                align = new AutoAlign(driveSimulation::getSimulatedDriveTrainPose);
 
                 break;
 
@@ -124,6 +134,8 @@ public class RobotContainer {
                         (pose) -> {});
                 vision = new Vision(drive, new VisionIO() {}, new VisionIO() {});
                 arm = new Arm(new ArmIO() {});
+                endEffector = new EndEffector(new EndEffectorIO() {});
+                align = new AutoAlign(drive::getPose);
 
                 break;
         }
@@ -141,11 +153,7 @@ public class RobotContainer {
         autoChooser.addOption("Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
         autoChooser.addOption("Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
-        visualizer = new RobotVisualizer(
-                arm::getPivotAngleRads,
-                arm::getExtensionLengthMeters,
-                arm::getWristAngleRads,
-                driveSimulation::getSimulatedDriveTrainPose);
+        visualizer = new RobotVisualizer(arm::getArmPosition);
 
         // Configure the button bindings
         configureButtonBindings();
@@ -161,7 +169,11 @@ public class RobotContainer {
     private void configureButtonBindings() {
         // Default command, normal field-relative drive
         drive.setDefaultCommand(DriveCommands.joystickDrive(
-                drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> -controller.getRightX()));
+                drive,
+                () -> -controller.getLeftY(),
+                () -> -controller.getLeftX(),
+                () -> -controller.getRightX(),
+                true));
 
         // // Lock to 0° when A button is held
         // controller
@@ -172,6 +184,11 @@ public class RobotContainer {
         // // Switch to X pattern when X button is pressed
         // controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
+        controller.povUp().whileTrue(align.stationAlign(drive));
+        controller.povLeft().whileTrue(align.reefAlignLeft(drive));
+        controller.povDown().whileTrue(align.reefAlignMid(drive));
+        controller.povRight().whileTrue(align.reefAlignRight(drive));
+
         // Reset gyro / odometry
         final Runnable resetGyro = Constants.currentMode == Constants.Mode.SIM
                 ? () -> drive.setPose(
@@ -181,32 +198,34 @@ public class RobotContainer {
         controller.start().onTrue(Commands.runOnce(resetGyro, drive).ignoringDisable(true));
 
         controller.y().onTrue(new InstantCommand(() -> arm.incrementArmState()));
-        controller.b().onTrue(new InstantCommand(() -> arm.setState(ArmState.L3)));
 
-        // Example Coral Placement Code
-        // TODO: delete these code for your own project
-        if (Constants.currentMode == Constants.Mode.SIM) {
-            // L4 placement
-            //     controller.y().onTrue(Commands.runOnce(() -> SimulatedArena.getInstance()
-            //             .addGamePieceProjectile(new ReefscapeCoralOnFly(
-            //                     driveSimulation.getSimulatedDriveTrainPose().getTranslation(),
-            //                     new Translation2d(0.4, 0),
-            //                     driveSimulation.getDriveTrainSimulatedChassisSpeedsFieldRelative(),
-            //                     driveSimulation.getSimulatedDriveTrainPose().getRotation(),
-            //                     Meters.of(2),
-            //                     MetersPerSecond.of(1.5),
-            //                     Degrees.of(-80)))));
-            // L3 placement
-            controller.b().onTrue(Commands.runOnce(() -> SimulatedArena.getInstance()
-                    .addGamePieceProjectile(new ReefscapeCoralOnFly(
-                            driveSimulation.getSimulatedDriveTrainPose().getTranslation(),
-                            new Translation2d(0.4, 0),
-                            driveSimulation.getDriveTrainSimulatedChassisSpeedsFieldRelative(),
-                            driveSimulation.getSimulatedDriveTrainPose().getRotation(),
-                            Meters.of(1.35),
-                            MetersPerSecond.of(1.5),
-                            Degrees.of(-60)))));
-        }
+        controller.leftBumper().or(opController.back()).onTrue(new InstantCommand(() -> endEffector.intake()));
+        controller
+                .rightBumper()
+                .onTrue(new InstantCommand(() -> endEffector.outtake()))
+                .onFalse(new InstantCommand(() -> endEffector.intake()));
+
+        opController.start().onTrue(new InstantCommand(() -> arm.setState(ArmState.CORAL_STATION)));
+        opController
+                .back()
+                .onTrue(new InstantCommand(() -> arm.setState(ArmState.GROUND_CORAL_INTAKE)))
+                .onFalse(new InstantCommand(() -> arm.setState(ArmState.STOWED)));
+        opController.a().onTrue(new InstantCommand(() -> arm.setState(ArmState.L1)));
+        opController.x().onTrue(new InstantCommand(() -> arm.setState(ArmState.L2)));
+        opController.b().onTrue(new InstantCommand(() -> arm.setState(ArmState.L3)));
+        opController
+                .y()
+                .onTrue(new ConditionalCommand(
+                        new InstantCommand(() -> arm.setState(ArmState.L4)),
+                        new InstantCommand(() -> arm.setState(ArmState.NET)),
+                        endEffector::isCoral));
+
+        opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(true)));
+        opController.rightBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(false)));
+        opController.povLeft().onTrue(new InstantCommand(() -> endEffector.setHorizontal(true)));
+        opController.povRight().onTrue(new InstantCommand(() -> endEffector.setHorizontal(false)));
+
+        new Trigger(align::isAlignedTest).onTrue(new InstantCommand(() -> endEffector.outtake()));
     }
 
     /**
@@ -221,7 +240,8 @@ public class RobotContainer {
     public void resetSimulationField() {
         if (Constants.currentMode != Constants.Mode.SIM) return;
 
-        driveSimulation.setSimulationWorldPose(new Pose2d(3, 3, new Rotation2d()));
+        // driveSimulation.setSimulationWorldPose(new Pose2d(12, 3, new Rotation2d()));
+        drive.setPose(new Pose2d(12, 3, new Rotation2d()));
         SimulatedArena.getInstance().resetFieldForAuto();
     }
 
@@ -234,5 +254,13 @@ public class RobotContainer {
                 "FieldSimulation/Coral", SimulatedArena.getInstance().getGamePiecesArrayByType("Coral"));
         Logger.recordOutput(
                 "FieldSimulation/Algae", SimulatedArena.getInstance().getGamePiecesArrayByType("Algae"));
+    }
+
+    public static boolean isRedAlliance() {
+        var alliance = DriverStation.getAlliance();
+        if (alliance.isPresent()) {
+            return alliance.get() == DriverStation.Alliance.Red;
+        }
+        return false;
     }
 }
