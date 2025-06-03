@@ -16,6 +16,7 @@ import frc.robot.subsystems.vision.VisionConstants;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
+import lombok.Getter;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
@@ -24,9 +25,9 @@ public class AutoAlign {
     private Supplier<Pose2d> poseSupplier;
 
     private PIDController reefStrafeSpeedController =
-            new PIDController(AlignConstants.REEF_kP, AlignConstants.REEF_kI, AlignConstants.REEF_kD);
+            new PIDController(AlignConstants.STRAFE_kP, AlignConstants.REEF_kI, AlignConstants.REEF_kD);
     private PIDController reefForwardSpeedController =
-            new PIDController(AlignConstants.REEF_Forward_kP, AlignConstants.REEF_kI, AlignConstants.REEF_kD);
+            new PIDController(AlignConstants.FWD_kP, AlignConstants.REEF_kI, AlignConstants.REEF_kD);
     private PIDController reefRotationSpeedController =
             new PIDController(AlignConstants.ROT_REEF_kP, AlignConstants.ROT_REEF_kI, AlignConstants.ROT_REEF_kD);
 
@@ -39,6 +40,10 @@ public class AutoAlign {
     private int currentReefAlignTagID = 18; // -1
     private int currentCSAlignTagID = 12; // -1
     private Map<Integer, Pose3d> tagPoses3d = getTagPoses();
+
+    @Getter
+    @AutoLogOutput
+    private boolean isForwards = true;
 
     public AutoAlign(Supplier<Pose2d> poseSupplier) {
         this.poseSupplier = poseSupplier;
@@ -81,7 +86,17 @@ public class AutoAlign {
             setReefAlignTagIDtoClosest();
         }
 
-        return getTagAngle(currentReefAlignTagID).plus(Rotation2d.k180deg);
+        Rotation2d backwardsRotation = getTagAngle(currentReefAlignTagID);
+        Rotation2d forwardsRotation = backwardsRotation.plus(Rotation2d.k180deg);
+
+        Rotation2d currRot2d = poseSupplier.get().getRotation();
+
+        double fwdError = forwardsRotation.minus(currRot2d).getDegrees();
+        double bwdError = backwardsRotation.minus(currRot2d).getDegrees();
+
+        isForwards = Math.abs(fwdError) < Math.abs(bwdError);
+
+        return isForwards ? forwardsRotation : backwardsRotation;
     }
 
     public Rotation2d getAlignAngleStation() {
@@ -130,6 +145,7 @@ public class AutoAlign {
 
         alignSpeedStrafe = reefStrafeSpeedController.calculate(offset.getY(), setPoint);
         alignSpeedStrafe += AlignConstants.ALIGN_KS * Math.signum(alignSpeedStrafe);
+        if (isForwards) alignSpeedStrafe *= -1;
 
         Logger.recordOutput("Align/Strafe Speed", alignSpeedStrafe);
         Logger.recordOutput("Align/Strafe Setpoint", setPoint);
@@ -157,11 +173,10 @@ public class AutoAlign {
         Transform2d offset = poseSupplier.get().minus(getTagPose(tagID));
 
         alignSpeedForward = reefForwardSpeedController.calculate(offset.getX(), setPoint);
-        if (Math.abs(reefForwardSpeedController.getError()) > 0.02) {
-            alignSpeedForward += 2 * AlignConstants.ALIGN_KS * Math.signum(alignSpeedForward);
-        }
+        alignSpeedForward += AlignConstants.ALIGN_KS * Math.signum(alignSpeedForward);
+        if (isForwards) alignSpeedForward *= -1;
 
-        isAlignedTest();
+        isAlignedDebounced();
 
         Logger.recordOutput("Align/Forward Speed", alignSpeedForward);
         Logger.recordOutput("Align/x", offset.getX());
@@ -187,21 +202,21 @@ public class AutoAlign {
 
     @AutoLogOutput(key = "Align/Error/isAligned")
     public boolean isAligned() {
-        return Math.abs(reefForwardSpeedController.getError()) < 0.1 // 0.49
-                && Math.abs(reefStrafeSpeedController.getError()) < 0.035
-                && reefRotationSpeedController.getError() < AlignConstants.ALIGN_ROT_TOLERANCE_DEGREES;
+        return Math.abs(reefForwardSpeedController.getError()) < AlignConstants.FWD_TOLERANCE
+                && Math.abs(reefStrafeSpeedController.getError()) < AlignConstants.STRAFE_TOLERANCE
+                && Math.abs(reefRotationSpeedController.getError()) < AlignConstants.ALIGN_ROT_TOLERANCE_DEGREES;
     }
 
     @AutoLogOutput(key = "Align/Error/isAlignedDebounced")
-    public boolean isAlignedTest() {
+    public boolean isAlignedDebounced() {
         return isAlignedDebouncer.calculate(isAligned());
     }
 
     private Command reefAlign(Drive drive, double tx) {
         return DriveCommands.joystickDrive(
                 drive,
-                () -> -getAlignForwardSpeedPercent(AlignConstants.REEF_ALIGN_TZ, getReefAlignTag()),
-                () -> -getAlignStrafeSpeedPercent(tx, getReefAlignTag()),
+                () -> getAlignForwardSpeedPercent(AlignConstants.REEF_ALIGN_TZ, getReefAlignTag()),
+                () -> getAlignStrafeSpeedPercent(tx, getReefAlignTag()),
                 () -> getAlignRotationSpeedPercent(getAlignAngleReef()),
                 false);
     }

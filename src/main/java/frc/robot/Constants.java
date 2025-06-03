@@ -23,6 +23,7 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.subsystems.arm.ArmPosition;
@@ -51,6 +52,7 @@ public final class Constants {
 
     public static final class ArmConstants {
         public enum ArmState {
+            // values obtained from CAD configurations in onshape
             STOWED(0, 0, 125),
             L4(68, 39.75, 45),
             L3(56, 19, 95),
@@ -60,8 +62,14 @@ public final class Constants {
             L3_BACKWARDS(100, 11, 115),
             L2_BACKWARDS(107, 0, 124),
             CORAL_STATION(67, 5.6, -31),
-            GROUND_CORAL_INTAKE(0, 0, 0),
-            NET(90, 40.5, -20);
+            NET(90, 40.5, -20),
+            // values obtained from heuristic estimation in sim
+            GROUND_INTAKE(0, 0, 0),
+            LOW_ALGAE(45, 3, -15),
+            LOW_ALGAE_BACKWARDS(100, 16, 80),
+            HIGH_ALGAE(63, 14, -30),
+            HIGH_ALGAE_BACKWARDS(107, 16, 80),
+            LOLLIPOP(0, 6, 42.5); // or procesor
 
             public final ArmPosition position;
 
@@ -70,6 +78,32 @@ public final class Constants {
                         Units.degreesToRadians(pivotDegrees),
                         Units.inchesToMeters(extensionInches),
                         Units.degreesToRadians(wristDegrees));
+            }
+
+            public static ArmState of(int level, boolean isCoral, boolean isForwards) {
+                if (isCoral) {
+                    switch (level) {
+                        case 4:
+                            return isForwards ? ArmState.L4 : ArmState.L4_BACKWARDS;
+                        case 3:
+                            return isForwards ? ArmState.L3 : ArmState.L3_BACKWARDS;
+                        case 2:
+                            return isForwards ? ArmState.L2 : ArmState.L2_BACKWARDS;
+                        default:
+                            return ArmState.L1;
+                    }
+                } else {
+                    switch (level) {
+                        case 4:
+                            return ArmState.NET;
+                        case 3:
+                            return isForwards ? ArmState.HIGH_ALGAE : ArmState.HIGH_ALGAE_BACKWARDS;
+                        case 2:
+                            return isForwards ? ArmState.LOW_ALGAE : ArmState.LOW_ALGAE_BACKWARDS;
+                        default:
+                            return ArmState.LOLLIPOP;
+                    }
+                }
             }
         }
 
@@ -218,15 +252,23 @@ public final class Constants {
 
         public static final double INTAKING_TIME = 0.5;
         public static final double DROP_COOLDOWN = 2.0;
+
+        public static final double LR_GEAR_RATIO = 1.0 / ((40.0 / 12.0) * (40.0 / 14.0));
+        public static final double LR_MASS = Units.lbsToKilograms(0.5);
+        public static final double LR_RADIUS = Units.inchesToMeters(2);
+        public static final double LR_MOI = 1.0 / 2.0 * LR_MASS * LR_RADIUS * LR_RADIUS;
+        public static final DCMotor LR_MOTOR = DCMotor.getKrakenX60(1); // x44
     }
 
     public static final class AlignConstants {
-        public static final double ALIGN_KS = 0.09; // 0.009
+        public static final double ALIGN_KS = 0.1; // 0.009
 
         // tx and ty tolerances with setpoint
         public static final double ALIGN_TOLERANCE_PIXELS = 0.5;
         // don't try translationally aligning unless rotation is already aligned within this tolerance
         public static final double ALIGN_ROT_TOLERANCE_DEGREES = 5;
+        public static final double FWD_TOLERANCE = 0.1;
+        public static final double STRAFE_TOLERANCE = 0.035;
 
         // reduce speed by 1/4 every tick when an april tag is not seen
         public static final double ALIGN_DAMPING_FACTOR = 0.75;
@@ -243,13 +285,13 @@ public final class Constants {
         public static final double STATION_ALIGN_TX = 0.07;
         public static final double STATION_ALIGN_TZ = 0;
 
-        public static final double REEF_kP = 0.85; // Tune all PID values
+        public static final double STRAFE_kP = 0.9;
         public static final double REEF_kI = 0;
         public static final double REEF_kD = 0;
 
-        public static final double REEF_Forward_kP = 0.75; // Tune all PID values
+        public static final double FWD_kP = 1.25;
 
-        public static final double ROT_REEF_kP = 0.02; // Tune all PID values
+        public static final double ROT_REEF_kP = 0.03;
         public static final double ROT_REEF_kI = 0;
         public static final double ROT_REEF_kD = 0;
         public static final double ROT_KS = ALIGN_KS;
@@ -312,6 +354,11 @@ public final class Constants {
                 REEF_ALGAE_POSES[i] = REEF_TAG_POSES[i].plus(i % 2 == 0 ? HIGH_ALGAE_TRANSFORM : LOW_ALGAE_TRANSFORM);
             }
         }
+
+        public static final double BARGE_X = FIELD_LENGTH / 2.0;
+        public static final double BARGE_WIDTH = Units.inchesToMeters(40) / 2.0;
+        public static final double BARGE_HEIGHT = Units.inchesToMeters(74 + 8);
+        public static final double BARGE_HEIGHT_TOLERANCE = Units.inchesToMeters(12);
     }
 
     public static final class VisualizerConstants {

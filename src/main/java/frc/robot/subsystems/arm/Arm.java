@@ -4,6 +4,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.ArmConstants;
 import frc.robot.Constants.ArmConstants.ArmState;
+import frc.robot.util.LoggedTunableNumber;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -18,6 +19,10 @@ public class Arm extends SubsystemBase {
     @AutoLogOutput
     private int i = 1;
 
+    private static LoggedTunableNumber tunablePivot = new LoggedTunableNumber("Arm/Tunable/Pivot", 0.0);
+    private static LoggedTunableNumber tunableExtension = new LoggedTunableNumber("Arm/Tunable/Extension", 0.0);
+    private static LoggedTunableNumber tunableWrist = new LoggedTunableNumber("Arm/Tunable/Wrist", 0.0);
+
     private ArmIO io;
     private final ArmIOInputsAutoLogged inputs = new ArmIOInputsAutoLogged();
 
@@ -30,13 +35,21 @@ public class Arm extends SubsystemBase {
         io.updateInputs(inputs);
         Logger.processInputs("Arm", inputs);
 
-        io.setPivotSetpoint(getPivotMotorRots(state.position.getPivotRads()));
-        io.setExtensionSetpoint(getExtensionMotorRots(state.position.getExtensionMeters()));
-        io.setWristSetpoint(getWristMotorRots(state.position.getWristRads()));
+        ArmPosition setpoint = state.position;
+        if (state == ArmState.CORAL_STATION) {
+            setpoint = new ArmPosition(
+                    Units.degreesToRadians(tunablePivot.get()),
+                    Units.inchesToMeters(tunableExtension.get()),
+                    Units.degreesToRadians(tunableWrist.get()));
+        }
 
-        Logger.recordOutput("Arm/Pivot Setpoint Rots", getPivotMotorRots(state.position.getPivotRads()));
-        Logger.recordOutput("Arm/Extension Setpoint Rots", getExtensionMotorRots(state.position.getExtensionMeters()));
-        Logger.recordOutput("Arm/Wrist Setpoint Rots", getWristMotorRots(state.position.getWristRads()));
+        io.setPivotSetpoint(getPivotMotorRots(setpoint.getPivotRads()));
+        io.setExtensionSetpoint(getExtensionMotorRots(setpoint.getExtensionMeters()));
+        io.setWristSetpoint(getWristMotorRots(setpoint.getWristRads()));
+
+        Logger.recordOutput("Arm/Pivot Setpoint Rots", getPivotMotorRots(setpoint.getPivotRads()));
+        Logger.recordOutput("Arm/Extension Setpoint Rots", getExtensionMotorRots(setpoint.getExtensionMeters()));
+        Logger.recordOutput("Arm/Wrist Setpoint Rots", getWristMotorRots(setpoint.getWristRads()));
     }
 
     public void incrementArmState() {

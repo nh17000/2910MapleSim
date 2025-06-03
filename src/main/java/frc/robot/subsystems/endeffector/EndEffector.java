@@ -33,7 +33,6 @@ public class EndEffector extends SubsystemBase {
     }
 
     public void intake() {
-        System.out.println("i");
         if (isCoral && isHorizontal) {
             intakeHorizontalCoral();
         } else if (isCoral) {
@@ -44,9 +43,9 @@ public class EndEffector extends SubsystemBase {
     }
 
     public void outtake() {
-        if (inputs.hasCoral) {
+        if (isCoral) {
             outtakeCoral();
-        } else if (inputs.hasAlgae) {
+        } else {
             outtakeAlgae();
         }
     }
