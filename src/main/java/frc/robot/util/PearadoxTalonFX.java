@@ -3,6 +3,7 @@ package frc.robot.util;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
+import frc.robot.Constants;
 
 /**
  * PearadoxTalonFX is a wrapper around the CTRE TalonFX motor controller. It applies configuration, optimizes CAN bus
@@ -26,7 +27,7 @@ public class PearadoxTalonFX extends TalonFX {
             getPosition(), getVelocity(), getMotorVoltage(), getSupplyCurrent(), getStatorCurrent(), getDeviceTemp()
         };
 
-        BaseStatusSignal.setUpdateFrequencyForAll(50, telemetrySignals);
+        BaseStatusSignal.setUpdateFrequencyForAll(Constants.LOOP_FREQUENCY, telemetrySignals);
 
         this.optimizeBusUtilization();
 

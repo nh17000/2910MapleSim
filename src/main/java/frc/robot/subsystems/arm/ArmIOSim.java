@@ -1,11 +1,11 @@
 package frc.robot.subsystems.arm;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
-import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import edu.wpi.first.wpilibj.simulation.TiltedElevatorSim;
 import edu.wpi.first.wpilibj.simulation.VariableLengthArmSim;
+import frc.robot.Constants;
 import frc.robot.Constants.ArmConstants;
 
 public class ArmIOSim extends ArmIOTalonFX {
@@ -14,7 +14,7 @@ public class ArmIOSim extends ArmIOTalonFX {
     private final TalonFXSimState wristSimState;
 
     private final VariableLengthArmSim variableLengthArmSim = new VariableLengthArmSim(
-            DCMotor.getKrakenX60(3),
+            ArmConstants.PIVOT_MOTORS,
             ArmConstants.PIVOT_GEAR_RATIO,
             calcPivotMOI(0),
             ArmConstants.ARM_SHOULDER_TO_WRIST_LENGTH,
@@ -24,7 +24,7 @@ public class ArmIOSim extends ArmIOTalonFX {
             true);
 
     private final TiltedElevatorSim tiltedElevatorSim = new TiltedElevatorSim(
-            DCMotor.getKrakenX60(3),
+            ArmConstants.EXTENSION_MOTORS,
             ArmConstants.EXTENSION_GEAR_RATIO,
             ArmConstants.ARM_MASS_KG,
             ArmConstants.EXTENSION_DRUM_RADIUS,
@@ -33,7 +33,7 @@ public class ArmIOSim extends ArmIOTalonFX {
             true);
 
     private final SingleJointedArmSim wristSim = new SingleJointedArmSim(
-            DCMotor.getKrakenX60(1), // actually a kraken x44
+            ArmConstants.WRIST_MOTOR,
             ArmConstants.WRIST_GEAR_RATIO,
             ArmConstants.WRIST_MASS_KG,
             ArmConstants.WRIST_LENGTH,
@@ -56,13 +56,13 @@ public class ArmIOSim extends ArmIOTalonFX {
     }
 
     private void updateSim() {
-        pivotSimState.setSupplyVoltage(12);
-        extensionSimState.setSupplyVoltage(12);
-        wristSimState.setSupplyVoltage(12);
+        pivotSimState.setSupplyVoltage(Constants.NOMINAL_VOLTAGE);
+        extensionSimState.setSupplyVoltage(Constants.NOMINAL_VOLTAGE);
+        wristSimState.setSupplyVoltage(Constants.NOMINAL_VOLTAGE);
 
         // pivot
         variableLengthArmSim.setInputVoltage(pivotSimState.getMotorVoltage());
-        variableLengthArmSim.update(0.02);
+        variableLengthArmSim.update(Constants.LOOP_PERIOD);
 
         pivotSimState.setRawRotorPosition(
                 Units.radiansToRotations(variableLengthArmSim.getAngleRads() * ArmConstants.PIVOT_GEAR_RATIO));
@@ -71,7 +71,7 @@ public class ArmIOSim extends ArmIOTalonFX {
 
         // extension
         tiltedElevatorSim.setInput(extensionSimState.getMotorVoltage());
-        tiltedElevatorSim.update(0.02);
+        tiltedElevatorSim.update(Constants.LOOP_PERIOD);
 
         extensionSimState.setRawRotorPosition(
                 Units.radiansToRotations(tiltedElevatorSim.getPositionMeters() / ArmConstants.EXTENSION_DRUM_RADIUS)
@@ -84,12 +84,13 @@ public class ArmIOSim extends ArmIOTalonFX {
         // pivot + extension
         variableLengthArmSim.setCGRadius(
                 (tiltedElevatorSim.getPositionMeters() + ArmConstants.ARM_SHOULDER_TO_WRIST_LENGTH) / 2.0);
+        variableLengthArmSim.setMOI(calcPivotMOI(tiltedElevatorSim.getPositionMeters()));
 
         tiltedElevatorSim.setAngleFromHorizontal(variableLengthArmSim.getAngleRads());
 
         // wrist
         wristSim.setInputVoltage(wristSimState.getMotorVoltage());
-        wristSim.update(0.02);
+        wristSim.update(Constants.LOOP_PERIOD);
 
         wristSimState.setRawRotorPosition(
                 Units.radiansToRotations(wristSim.getAngleRads() * ArmConstants.WRIST_GEAR_RATIO));

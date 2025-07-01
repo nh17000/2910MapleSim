@@ -1,12 +1,17 @@
 package frc.robot.subsystems.endeffector;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants.EndEffectorConstants.EEState;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class EndEffector extends SubsystemBase {
+    @AutoLogOutput
+    @Getter
+    private EEState state = EEState.OFF;
+
     @AutoLogOutput
     @Getter
     @Setter
@@ -22,68 +27,38 @@ public class EndEffector extends SubsystemBase {
 
     public EndEffector(EndEffectorIO io) {
         this.io = io;
-
-        intake();
     }
 
     @Override
     public void periodic() {
         io.updateInputs(inputs);
         Logger.processInputs("EndEffector", inputs);
+
+        io.setLeftSpeed(state.leftVolts);
+        io.setRightSpeed(state.rightVolts);
+        io.setTopSpeed(state.topVolts);
     }
 
     public void intake() {
-        if (isCoral && isHorizontal) {
-            intakeHorizontalCoral();
+        if (hasCoral() || hasAlgae()) {
+            state = EEState.OFF;
+        } else if (isCoral && isHorizontal) {
+            state = EEState.HORIZONTAL_CORAL_INTAKE;
         } else if (isCoral) {
-            intakeVerticalCoral();
+            state = EEState.VERTICAL_CORAL_INTAKE;
         } else {
-            intakeAlgae();
+            state = EEState.ALGAE_INTAKE;
         }
     }
 
-    public void outtake() {
-        if (isCoral) {
-            outtakeCoral();
+    public void outtake(boolean isForwards) {
+        if (isCoral && isForwards) {
+            state = EEState.VERTICAL_CORAL_OUTTAKE_FWD;
+        } else if (isCoral) {
+            state = EEState.VERTICAL_CORAL_OUTTAKE_BWD;
         } else {
-            outtakeAlgae();
+            state = EEState.ALGAE_OUTTAKE;
         }
-    }
-
-    public void stop() {
-        io.setLeftSpeed(0.0);
-        io.setRightSpeed(0.0);
-        io.setTopSpeed(0.0);
-    }
-
-    private void intakeVerticalCoral() {
-        io.setLeftSpeed(0.3);
-        io.setRightSpeed(-0.3);
-        io.setTopSpeed(-0.3);
-    }
-
-    private void intakeHorizontalCoral() {
-        io.setLeftSpeed(0.3);
-        io.setRightSpeed(-0.3);
-        io.setTopSpeed(0.3);
-    }
-
-    private void intakeAlgae() {
-        io.setLeftSpeed(0.0);
-        io.setRightSpeed(0.0);
-        io.setTopSpeed(0.8);
-    }
-
-    private void outtakeCoral() {
-        io.setLeftSpeed(-0.5);
-        io.setRightSpeed(0.5);
-        io.setTopSpeed(-0.5);
-    }
-
-    private void outtakeAlgae() {
-        io.setLeftSpeed(0.0);
-        io.setRightSpeed(0.0);
-        io.setTopSpeed(-0.8);
     }
 
     public boolean hasCoral() {

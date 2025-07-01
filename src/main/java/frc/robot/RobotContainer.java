@@ -13,8 +13,6 @@
 
 package frc.robot;
 
-import static frc.robot.subsystems.vision.VisionConstants.*;
-
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -25,6 +23,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ArmConstants.ArmState;
@@ -172,16 +171,7 @@ public class RobotContainer {
                 () -> -controller.getLeftY(),
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX(),
-                false));
-
-        // // Lock to 0° when A button is held
-        // controller
-        //         .a()
-        //         .whileTrue(DriveCommands.joystickDriveAtAngle(
-        //                 drive, () -> -controller.getLeftY(), () -> -controller.getLeftX(), () -> new Rotation2d()));
-
-        // // Switch to X pattern when X button is pressed
-        // controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+                true));
 
         controller.povUp().whileTrue(align.stationAlign(drive));
         controller.povLeft().whileTrue(align.reefAlignLeft(drive));
@@ -196,38 +186,32 @@ public class RobotContainer {
                 : () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), new Rotation2d())); // zero gyro
         controller.start().onTrue(Commands.runOnce(resetGyro, drive).ignoringDisable(true));
 
-        controller.y().onTrue(new InstantCommand(() -> arm.incrementArmState()));
-
-        controller.leftBumper().or(opController.back()).onTrue(new InstantCommand(() -> endEffector.intake()));
+        controller.leftBumper().or(opController.back()).onTrue(new RunCommand(() -> endEffector.intake(), endEffector));
         controller
                 .rightBumper()
-                .onTrue(new InstantCommand(() -> endEffector.outtake()))
-                .onFalse(new InstantCommand(() -> endEffector.intake()));
+                .whileTrue(new RunCommand(() -> endEffector.outtake(align.isForwards()), endEffector))
+                .onFalse(new RunCommand(() -> endEffector.intake(), endEffector));
 
         opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(true)));
         opController.rightBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(false)));
-        opController.start().onTrue(new InstantCommand(() -> arm.setState(ArmState.CORAL_STATION)));
+        opController.start().onTrue(arm.applyState(ArmState.CORAL_STATION));
         opController
                 .back()
                 .and(() -> !endEffector.hasAlgae() && !endEffector.hasCoral())
-                .onTrue(new InstantCommand(() -> arm.setState(ArmState.GROUND_INTAKE)))
-                .onFalse(new InstantCommand(() -> arm.setState(ArmState.STOWED)));
+                .onTrue(arm.applyState(ArmState.GROUND_INTAKE))
+                .onFalse(arm.applyState(ArmState.STOWED));
         opController
                 .a()
-                .onTrue(new InstantCommand(
-                        () -> arm.setState(ArmState.of(1, endEffector.isCoral(), align.isForwards()))));
+                .onTrue(arm.followStateSupplier(() -> ArmState.of(1, endEffector.isCoral(), align.isForwards())));
         opController
                 .x()
-                .onTrue(new InstantCommand(
-                        () -> arm.setState(ArmState.of(2, endEffector.isCoral(), align.isForwards()))));
+                .onTrue(arm.followStateSupplier(() -> ArmState.of(2, endEffector.isCoral(), align.isForwards())));
         opController
                 .b()
-                .onTrue(new InstantCommand(
-                        () -> arm.setState(ArmState.of(3, endEffector.isCoral(), align.isForwards()))));
+                .onTrue(arm.followStateSupplier(() -> ArmState.of(3, endEffector.isCoral(), align.isForwards())));
         opController
                 .y()
-                .onTrue(new InstantCommand(
-                        () -> arm.setState(ArmState.of(4, endEffector.isCoral(), align.isForwards()))));
+                .onTrue(arm.followStateSupplier(() -> ArmState.of(4, endEffector.isCoral(), align.isForwards())));
 
         // new Trigger(() -> align.isAlignedDebounced() && endEffector.hasCoral())
         //         .onTrue(new InstantCommand(() -> endEffector.outtake()));
@@ -260,7 +244,7 @@ public class RobotContainer {
         Logger.recordOutput(
                 "FieldSimulation/Algae", SimulatedArena.getInstance().getGamePiecesArrayByType("Algae"));
         Logger.recordOutput(
-                "FieldSimulation/StagedAlgae", AlgaeHandler.getInstance().periodic());
+                "FieldSimulation/Staged Algae", AlgaeHandler.getInstance().periodic());
     }
 
     public static boolean isRedAlliance() {

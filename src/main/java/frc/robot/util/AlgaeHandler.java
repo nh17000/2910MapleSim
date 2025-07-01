@@ -12,7 +12,7 @@ import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeAlgaeOnFly;
 
 public class AlgaeHandler {
-    private List<Pose3d> stagedAlgae;
+    private final List<Pose3d> stagedAlgae = new ArrayList<>();
 
     private static AlgaeHandler INSTANCE;
 
@@ -28,11 +28,12 @@ public class AlgaeHandler {
     }
 
     public void reset() {
-        stagedAlgae = new ArrayList<>(List.of(FieldConstants.REEF_ALGAE_POSES));
+        stagedAlgae.clear();
+        stagedAlgae.addAll(List.of(FieldConstants.REEF_ALGAE_POSES));
     }
 
     public Pose3d[] periodic() {
-        simulateBarge();
+        simulateNet();
         return getPose3ds();
     }
 
@@ -48,7 +49,8 @@ public class AlgaeHandler {
         return Optional.empty();
     }
 
-    public void simulateBarge() {
+    // collect launched algae projectiles
+    public void simulateNet() {
         var iterator = SimulatedArena.getInstance().gamePieceLaunched().iterator();
         while (iterator.hasNext()) {
             var gamePiece = iterator.next();

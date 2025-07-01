@@ -3,7 +3,7 @@ package frc.robot.subsystems.endeffector;
 import frc.robot.Constants.EndEffectorConstants;
 import frc.robot.util.PearadoxTalonFX;
 
-public class EndEffectorIOTalonFX implements EndEffectorIO {
+public abstract class EndEffectorIOTalonFX implements EndEffectorIO {
     protected final PearadoxTalonFX left;
     protected final PearadoxTalonFX right;
     protected final PearadoxTalonFX top;
@@ -23,7 +23,7 @@ public class EndEffectorIOTalonFX implements EndEffectorIO {
 
     @Override
     public void setLeftSpeed(double speed) {
-        left.set(speed);
+        left.setVoltage(speed * 12);
     }
 
     @Override

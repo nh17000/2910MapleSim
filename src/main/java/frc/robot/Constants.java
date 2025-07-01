@@ -28,6 +28,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.subsystems.arm.ArmPosition;
 import frc.robot.subsystems.vision.VisionConstants;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -49,6 +50,10 @@ public final class Constants {
         /** Replaying from a log file. */
         REPLAY
     }
+
+    public static final double LOOP_PERIOD = 0.02; // 20ms
+    public static final double LOOP_FREQUENCY = 1.0 / LOOP_PERIOD; // 50Hz
+    public static final double NOMINAL_VOLTAGE = 12;
 
     public static final class ArmConstants {
         public enum ArmState {
@@ -175,7 +180,7 @@ public final class Constants {
             config.Slot0.kS = 0.0;
             config.Slot0.kV = 0.0;
             config.Slot0.kA = 0.0;
-            config.Slot0.kP = 0.3;
+            config.Slot0.kP = 0.25;
             config.Slot0.kI = 0.0;
             config.Slot0.kD = 0.0;
 
@@ -201,19 +206,44 @@ public final class Constants {
 
         public static final double PIVOT_MIN_ANGLE = 0;
         public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(120);
+        public static final DCMotor PIVOT_MOTORS = DCMotor.getKrakenX60(3);
 
         public static final double EXTENSION_DRUM_RADIUS = Units.inchesToMeters(2.005 / 2); // ?
         public static final double EXTENSION_MIN_LENGTH = 0;
         public static final double EXTENSION_MAX_LENGTH = Units.inchesToMeters(40.5);
+        public static final DCMotor EXTENSION_MOTORS = DCMotor.getKrakenX60(3);
 
         public static final double WRIST_MASS_KG = Units.lbsToKilograms(5);
         public static final double WRIST_LENGTH = Units.inchesToMeters(6);
         public static final double WRIST_STARTING_ANGLE = Units.degreesToRadians(125);
         public static final double WRIST_MIN_ANGLE = Units.degreesToRadians(-35);
         public static final double WRIST_MAX_ANGLE = Units.degreesToRadians(150);
+        public static final DCMotor WRIST_MOTOR = // kraken x44
+                new DCMotor(12, 4.05, 275, 1.4, Units.rotationsPerMinuteToRadiansPerSecond(7530), 1);
     }
 
     public static final class EndEffectorConstants {
+        public enum EEState {
+            VERTICAL_CORAL_INTAKE(-0.3, -0.3),
+            VERTICAL_CORAL_OUTTAKE_FWD(-0.5, -0.5),
+            VERTICAL_CORAL_OUTTAKE_BWD(0.5, -0.5),
+            HORIZONTAL_CORAL_INTAKE(-0.3, 0.3),
+            HORIZONTAL_CORAL_OUTTAKE(0.5, 0.5),
+            ALGAE_INTAKE(0.0, 0.7),
+            ALGAE_OUTTAKE(0.0, -1.0),
+            OFF(0.0, 0.0);
+
+            public final double leftVolts;
+            public final double rightVolts;
+            public final double topVolts;
+
+            private EEState(double leftVolts, double topVolts) {
+                this.leftVolts = leftVolts;
+                this.rightVolts = -leftVolts;
+                this.topVolts = topVolts;
+            }
+        }
+
         public static final TalonFXConfiguration getLRConfigs() {
             TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -257,44 +287,35 @@ public final class Constants {
         public static final double LR_MASS = Units.lbsToKilograms(0.5);
         public static final double LR_RADIUS = Units.inchesToMeters(2);
         public static final double LR_MOI = 1.0 / 2.0 * LR_MASS * LR_RADIUS * LR_RADIUS;
-        public static final DCMotor LR_MOTOR = DCMotor.getKrakenX60(1); // x44
+
+        public static final DCMotor LR_MOTOR = // kraken x44
+                new DCMotor(12, 4.05, 275, 1.4, Units.rotationsPerMinuteToRadiansPerSecond(7530), 1);
     }
 
     public static final class AlignConstants {
-        public static final double ALIGN_KS = 0.1; // 0.009
+        // public static final double ALIGN_KS = 0.1;
 
-        // tx and ty tolerances with setpoint
-        public static final double ALIGN_TOLERANCE_PIXELS = 0.5;
-        // don't try translationally aligning unless rotation is already aligned within this tolerance
-        public static final double ALIGN_ROT_TOLERANCE_DEGREES = 5;
-        public static final double FWD_TOLERANCE = 0.1;
-        public static final double STRAFE_TOLERANCE = 0.035;
-
-        // reduce speed by 1/4 every tick when an april tag is not seen
-        public static final double ALIGN_DAMPING_FACTOR = 0.75;
-        public static final double ALIGN_SPEED_DEADBAND = 0.025;
-
-        public static final double BRANCH_SPACING = Units.inchesToMeters(12.97 / 2.0); // 12.94 //12.97
+        public static final double BRANCH_SPACING = Units.inchesToMeters(12.97 / 2.0);
 
         // target relative
-        public static final double REEF_ALIGN_MID_TX = 0; // 0.28575
+        public static final double REEF_ALIGN_MID_TX = 0.08;
         public static final double REEF_ALIGN_LEFT_TX = -BRANCH_SPACING; // - 0.05 + 0.01;
-        public static final double REEF_ALIGN_RIGHT_TX = BRANCH_SPACING; // - 0.03 + 0.01;
-        public static final double REEF_ALIGN_TZ = 0.5414; // target relative
+        public static final double REEF_ALIGN_RIGHT_TX = BRANCH_SPACING; // - 0.03 + 0.02;
+        public static final double REEF_ALIGN_TZ = Units.inchesToMeters(22); // 18
 
-        public static final double STATION_ALIGN_TX = 0.07;
-        public static final double STATION_ALIGN_TZ = 0;
+        public static final double STATION_ALIGN_TX = 0.0;
+        public static final double STATION_ALIGN_TZ = -Units.inchesToMeters(18);
 
-        public static final double STRAFE_kP = 0.9;
-        public static final double REEF_kI = 0;
-        public static final double REEF_kD = 0;
+        public static final double REEF_kP = 5.0;
+        public static final double REEF_kI = 0.0;
+        public static final double REEF_kD = 0.0;
 
-        public static final double FWD_kP = 1.25;
+        public static final double ROT_REEF_kP = 5.0;
+        public static final double ROT_REEF_kI = 0.0;
+        public static final double ROT_REEF_kD = 0.0;
 
-        public static final double ROT_REEF_kP = 0.03;
-        public static final double ROT_REEF_kI = 0;
-        public static final double ROT_REEF_kD = 0;
-        public static final double ROT_KS = ALIGN_KS;
+        public static final double ALIGN_ROT_TOLERANCE = Units.degreesToRadians(3);
+        public static final double ALIGN_TRANSLATION_TOLERANCE = Units.inchesToMeters(2);
     }
 
     public static final class FieldConstants {
@@ -305,6 +326,7 @@ public final class Constants {
         public static final int[] BLUE_CORAL_STATION_TAG_IDS = {12, 13};
         public static final int[] RED_REEF_TAG_IDS = {7, 6, 11, 10, 9, 8};
         public static final int[] RED_CORAL_STATION_TAG_IDS = {1, 2};
+        public static final int[] ALL_REEF_TAG_IDS = {18, 19, 20, 21, 22, 17, 7, 6, 11, 10, 9, 8};
 
         public static final Translation2d BLUE_REEF_CENTER = new Translation2d(4.5, 4);
 
@@ -339,6 +361,14 @@ public final class Constants {
             for (int tag : FieldConstants.BLUE_REEF_TAG_IDS) {
                 REEF_TAG_POSES[i++] =
                         VisionConstants.aprilTagLayout.getTagPose(tag).get();
+            }
+        }
+
+        public static final List<Pose2d> REEF_TAGS = new ArrayList<>();
+
+        static {
+            for (Pose3d tag : REEF_TAG_POSES) {
+                REEF_TAGS.add(tag.toPose2d());
             }
         }
 

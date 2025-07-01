@@ -1,23 +1,22 @@
 package frc.robot.subsystems.arm;
 
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.ArmConstants;
 import frc.robot.Constants.ArmConstants.ArmState;
 import frc.robot.util.LoggedTunableNumber;
+import java.util.function.Supplier;
 import lombok.Getter;
-import lombok.Setter;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Arm extends SubsystemBase {
     @AutoLogOutput
     @Getter
-    @Setter
     private ArmState state = ArmState.STOWED;
-
-    @AutoLogOutput
-    private int i = 1;
 
     private static LoggedTunableNumber tunablePivot = new LoggedTunableNumber("Arm/Tunable/Pivot", 0.0);
     private static LoggedTunableNumber tunableExtension = new LoggedTunableNumber("Arm/Tunable/Extension", 0.0);
@@ -52,9 +51,12 @@ public class Arm extends SubsystemBase {
         Logger.recordOutput("Arm/Wrist Setpoint Rots", getWristMotorRots(setpoint.getWristRads()));
     }
 
-    public void incrementArmState() {
-        setState(ArmState.values()[i++]);
-        if (i == ArmState.values().length) i = 0;
+    public Command applyState(ArmState desiredState) {
+        return new InstantCommand(() -> this.state = desiredState, this);
+    }
+
+    public Command followStateSupplier(Supplier<ArmState> stateSupplier) {
+        return new RunCommand(() -> this.state = stateSupplier.get(), this);
     }
 
     @AutoLogOutput

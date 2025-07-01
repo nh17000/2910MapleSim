@@ -3,9 +3,11 @@ package frc.robot.subsystems.endeffector;
 import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -13,6 +15,7 @@ import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
+import frc.robot.Constants;
 import frc.robot.Constants.EndEffectorConstants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.Constants.VisualizerConstants;
@@ -47,6 +50,14 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     @AutoLogOutput(key = "EndEffector/Roller Theta")
     private double rollerAngularPosition = 0.0;
 
+    @AutoLogOutput(key = "EndEffector/Coral Pos")
+    private double coralPos = 0.0;
+
+    private static final double MAX_POS = 0.15;
+    private static final double INTAKE_POS = 0.1;
+    private static final double MIN_POS = -0.05;
+    private static final double POS_TOLERANCE = 0.01;
+
     private final IntakeSimulation coralGroundIntakeSim;
     private final IntakeSimulation algaeGroundIntakeSim;
 
@@ -75,19 +86,25 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     public void updateInputs(EndEffectorIOInputs inputs) {
         super.updateInputs(inputs);
 
-        updateRollerSim(0.02);
+        updateRollerSim(Constants.LOOP_PERIOD);
         updateGamePieces(inputs.leftData.appliedVolts(), inputs.topData.appliedVolts());
 
-        inputs.hasCoral = hasCoral;
+        inputs.hasCoral = hasCoral; // && MathUtil.isNear(0.0, coralPos, 0.15);
         inputs.hasAlgae = hasAlgae;
     }
 
     private void updateRollerSim(double dtSeconds) {
-        leftSimState.setSupplyVoltage(12);
+        leftSimState.setSupplyVoltage(Constants.NOMINAL_VOLTAGE);
         rollerSim.setInputVoltage(leftSimState.getMotorVoltage());
         rollerSim.update(dtSeconds);
 
-        rollerAngularPosition += dtSeconds * Units.radiansToRotations(rollerSim.getAngularVelocityRadPerSec());
+        double deltaTheta = dtSeconds * Units.radiansToRotations(rollerSim.getAngularVelocityRadPerSec());
+        rollerAngularPosition += deltaTheta;
+        if (hasCoral) {
+            coralPos = MathUtil.clamp(coralPos + EndEffectorConstants.LR_RADIUS * deltaTheta * 20, MIN_POS - POS_TOLERANCE, MAX_POS + POS_TOLERANCE);
+        } else {
+            coralPos = 0.0;
+        }
 
         leftSimState.setRawRotorPosition(
                 Units.radiansToRotations(rollerAngularPosition) * EndEffectorConstants.LR_GEAR_RATIO);
@@ -111,7 +128,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         } else { // coral
             horizontal = topVolts > 0.5; // intake horizontally if top rollers running
 
-            if (leftVolts > 0.5) { // coral intake
+            if (leftVolts < -0.5) { // coral intake
                 dropFromCoralStation(); // drop coral from the station
 
                 if (getHeldCoralTransform().getMeasureZ().lt(Inches.of(8))) {
@@ -119,21 +136,27 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                     coralGroundIntakeSim.startIntake();
                 } else { // intake coral in the air
                     coralGroundIntakeSim.stopIntake();
-                    intakeCoralProjectiles();
+                    // intakeCoralProjectiles();
                 }
-            } else if (leftVolts < -0.5) { // coral outtake
-                shootCoral();
+            } else if (leftVolts > -0.5) { // coral outtake
+                coralGroundIntakeSim.stopIntake();
             }
         }
 
         if (hasCoral != coralGroundIntakeSim.getGamePiecesAmount() > 0) {
-            if (!hasCoral) hasCoral = true; // game piece intook
+            if (!hasCoral) setHasCoral(true); // game piece intook
             else coralGroundIntakeSim.addGamePieceToIntake(); // preload
         }
 
         if (hasAlgae != algaeGroundIntakeSim.getGamePiecesAmount() > 0) {
             if (!hasAlgae) hasAlgae = true; // game piece intook
             else algaeGroundIntakeSim.addGamePieceToIntake(); // preload
+        }
+
+        if (coralPos > MAX_POS - POS_TOLERANCE) {
+            shootCoral(false);
+        } else if (coralPos < MIN_POS + POS_TOLERANCE) {
+            shootCoral(true);
         }
 
         visualizeGamePieces();
@@ -151,7 +174,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                 if (checkTolerance(intakePose.minus(gamePiece.getPose3d()))) {
                     iterator.remove();
                     intookGamePiecePrevPose = gamePiece.getPose3d();
-                    hasCoral = true;
+                    setHasCoral(true);
                     intakingTimer.restart();
                     break;
                 }
@@ -176,8 +199,6 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
     private void visualizeGamePieces() {
         Logger.recordOutput(
-                "FieldSimulation/Staged Algae", AlgaeHandler.getInstance().getPose3ds());
-        Logger.recordOutput(
                 "FieldSimulation/Held Coral", hasCoral ? interpolateHeldPose(getHeldCoralPose()) : Pose3d.kZero);
         Logger.recordOutput(
                 "FieldSimulation/Held Algae", hasAlgae ? interpolateHeldPose(getHeldAlgaePose()) : Pose3d.kZero);
@@ -197,7 +218,10 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     }
 
     private Transform3d getHeldCoralTransform() {
-        return wristTransformSupplier.get().plus(VisualizerConstants.CORAL_TRANSFORM);
+        return wristTransformSupplier
+                .get()
+                .plus(VisualizerConstants.CORAL_TRANSFORM)
+                .plus(new Transform3d(coralPos, 0, 0, Rotation3d.kZero));
     }
 
     private Transform3d getHeldHorizontalCoralTransform() {
@@ -219,7 +243,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         return robotPose.transformBy(getHeldAlgaeTransform());
     }
 
-    private void shootCoral() {
+    private void shootCoral(boolean forwards) {
         if (!hasCoral) return;
 
         Transform3d eeTransform = getHeldCoralTransform();
@@ -237,11 +261,11 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                         // The height at which the coral is ejected
                         eeTransform.getMeasureZ(),
                         // The initial speed of the coral
-                        MetersPerSecond.of(horizontal ? 2 : -2),
+                        MetersPerSecond.of(horizontal || !forwards ? 2 : -2),
                         // The coral is ejected at this angle
                         eeTransform.getRotation().getMeasureAngle()));
 
-        hasCoral = false;
+        setHasCoral(false);
         coralGroundIntakeSim.obtainGamePieceFromIntake();
     }
 
@@ -302,5 +326,12 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                         Degrees.of(-55 + Math.random() * 30)));
 
         droppingTimer.restart();
+    }
+
+    private void setHasCoral(boolean flag) {
+        if (hasCoral != flag && flag) {
+            coralPos = INTAKE_POS;
+        }
+        hasCoral = flag;
     }
 }
