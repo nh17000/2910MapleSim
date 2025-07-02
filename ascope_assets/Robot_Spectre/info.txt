@@ -1,0 +1,6 @@
+model = base
+model_0 = stage 0
+model_1 = stage 1
+model_2 = stage 2
+model_3 = wrist
+model_4 = climber

@@ -18,7 +18,6 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -26,10 +25,11 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
+import frc.robot.subsystems.arm.Arm;
 import frc.robot.subsystems.arm.ArmPosition;
 import frc.robot.subsystems.vision.VisionConstants;
+import frc.robot.util.PhoenixUtil;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -71,9 +71,9 @@ public final class Constants {
             // values obtained from heuristic estimation in sim
             GROUND_INTAKE(0, 0, 0),
             LOW_ALGAE(45, 3, -15),
-            LOW_ALGAE_BACKWARDS(100, 16, 80),
+            LOW_ALGAE_BACKWARDS(107, 0, 80),
             HIGH_ALGAE(63, 14, -30),
-            HIGH_ALGAE_BACKWARDS(107, 16, 80),
+            HIGH_ALGAE_BACKWARDS(100, 16, 80),
             LOLLIPOP(0, 6, 42.5); // or procesor
 
             public final ArmPosition position;
@@ -120,8 +120,8 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 25;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = 1000;
-            config.MotionMagic.MotionMagicAcceleration = 2000;
+            config.MotionMagic.MotionMagicCruiseVelocity = Arm.getPivotMotorRots(Units.degreesToRadians(1000));
+            config.MotionMagic.MotionMagicAcceleration = Arm.getPivotMotorRots(Units.degreesToRadians(600));
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -130,7 +130,7 @@ public final class Constants {
             config.Slot0.kS = 0.0;
             config.Slot0.kV = 0.0;
             config.Slot0.kA = 0.0;
-            config.Slot0.kP = 0.25;
+            config.Slot0.kP = 0.6;
             config.Slot0.kI = 0.0;
             config.Slot0.kD = 0.0;
 
@@ -145,8 +145,8 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 30;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = 1000;
-            config.MotionMagic.MotionMagicAcceleration = 2000;
+            config.MotionMagic.MotionMagicCruiseVelocity = Arm.getExtensionMotorRots(Units.inchesToMeters(200));
+            config.MotionMagic.MotionMagicAcceleration = Arm.getExtensionMotorRots(Units.inchesToMeters(400));
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -155,7 +155,7 @@ public final class Constants {
             config.Slot0.kS = 0.0;
             config.Slot0.kV = 0.0;
             config.Slot0.kA = 0.0;
-            config.Slot0.kP = 0.25;
+            config.Slot0.kP = 0.5;
             config.Slot0.kI = 0.0;
             config.Slot0.kD = 0.0;
 
@@ -170,8 +170,8 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 30;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = 1000;
-            config.MotionMagic.MotionMagicAcceleration = 2000;
+            config.MotionMagic.MotionMagicCruiseVelocity = Arm.getWristMotorRots(Units.degreesToRadians(2000));
+            config.MotionMagic.MotionMagicAcceleration = Arm.getWristMotorRots(Units.degreesToRadians(4500));
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -180,7 +180,7 @@ public final class Constants {
             config.Slot0.kS = 0.0;
             config.Slot0.kV = 0.0;
             config.Slot0.kA = 0.0;
-            config.Slot0.kP = 0.25;
+            config.Slot0.kP = 0.15;
             config.Slot0.kI = 0.0;
             config.Slot0.kD = 0.0;
 
@@ -197,9 +197,9 @@ public final class Constants {
 
         public static final int WRIST_ID = 40;
 
-        public static final double PIVOT_GEAR_RATIO = 725.0 / 6.0; // 120.83
-        public static final double EXTENSION_GEAR_RATIO = 6.28;
-        public static final double WRIST_GEAR_RATIO = 30; // ?
+        public static final double PIVOT_GEAR_RATIO = (60. / 12.) * (60. / 16.) * (58. / 9.); // 120.83
+        public static final double EXTENSION_GEAR_RATIO = (32. / 16.) * (40. / 26.) * (50. / 20.) * (62. / 76.); // 6.28
+        public static final double WRIST_GEAR_RATIO = (50. / 9.) * (38. / 12.) * (38. / 12.); // 55.71
 
         public static final double ARM_MASS_KG = Units.lbsToKilograms(20);
         public static final double ARM_SHOULDER_TO_WRIST_LENGTH = VisualizerConstants.WRIST_OFFSET.getNorm();
@@ -208,7 +208,7 @@ public final class Constants {
         public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(120);
         public static final DCMotor PIVOT_MOTORS = DCMotor.getKrakenX60(3);
 
-        public static final double EXTENSION_DRUM_RADIUS = Units.inchesToMeters(2.005 / 2); // ?
+        public static final double EXTENSION_DRUM_RADIUS = Units.inchesToMeters(0.25 * 16.0 / Math.PI * 0.5); // ~0.64"
         public static final double EXTENSION_MIN_LENGTH = 0;
         public static final double EXTENSION_MAX_LENGTH = Units.inchesToMeters(40.5);
         public static final DCMotor EXTENSION_MOTORS = DCMotor.getKrakenX60(3);
@@ -218,8 +218,7 @@ public final class Constants {
         public static final double WRIST_STARTING_ANGLE = Units.degreesToRadians(125);
         public static final double WRIST_MIN_ANGLE = Units.degreesToRadians(-35);
         public static final double WRIST_MAX_ANGLE = Units.degreesToRadians(150);
-        public static final DCMotor WRIST_MOTOR = // kraken x44
-                new DCMotor(12, 4.05, 275, 1.4, Units.rotationsPerMinuteToRadiansPerSecond(7530), 1);
+        public static final DCMotor WRIST_MOTOR = PhoenixUtil.getKrakenX44(1);
     }
 
     public static final class EndEffectorConstants {
@@ -288,8 +287,7 @@ public final class Constants {
         public static final double LR_RADIUS = Units.inchesToMeters(2);
         public static final double LR_MOI = 1.0 / 2.0 * LR_MASS * LR_RADIUS * LR_RADIUS;
 
-        public static final DCMotor LR_MOTOR = // kraken x44
-                new DCMotor(12, 4.05, 275, 1.4, Units.rotationsPerMinuteToRadiansPerSecond(7530), 1);
+        public static final DCMotor LR_MOTOR = PhoenixUtil.getKrakenX44(1);
     }
 
     public static final class AlignConstants {
@@ -304,7 +302,7 @@ public final class Constants {
         public static final double REEF_ALIGN_TZ = Units.inchesToMeters(22); // 18
 
         public static final double STATION_ALIGN_TX = 0.0;
-        public static final double STATION_ALIGN_TZ = -Units.inchesToMeters(18);
+        public static final double STATION_ALIGN_TZ = Units.inchesToMeters(18);
 
         public static final double REEF_kP = 5.0;
         public static final double REEF_kI = 0.0;
@@ -330,25 +328,18 @@ public final class Constants {
 
         public static final Translation2d BLUE_REEF_CENTER = new Translation2d(4.5, 4);
 
-        public static final Translation2d BLUE_NPS_CORAL_STATION =
-                new Translation2d(Units.inchesToMeters(33.526), Units.inchesToMeters(291.176));
-        public static final Translation2d BLUE_PS_CORAL_STATION =
-                new Translation2d(Units.inchesToMeters(33.526), Units.inchesToMeters(25.824));
+        public static final List<Pose2d> CORAL_STATIONS = new ArrayList<>();
 
-        public static final Translation2d RED_NPS_CORAL_STATION =
-                new Translation2d(FIELD_LENGTH - Units.inchesToMeters(33.526), Units.inchesToMeters(291.176));
-        public static final Translation2d RED_PS_CORAL_STATION =
-                new Translation2d(FIELD_LENGTH - Units.inchesToMeters(33.526), Units.inchesToMeters(25.824));
-
-        public static final List<Pose2d> CORAL_STATIONS = Arrays.asList(
-                new Pose2d(BLUE_NPS_CORAL_STATION, new Rotation2d(125)),
-                new Pose2d(BLUE_PS_CORAL_STATION, new Rotation2d(-125)),
-                new Pose2d(RED_NPS_CORAL_STATION, new Rotation2d(-125)),
-                new Pose2d(RED_PS_CORAL_STATION, new Rotation2d(125)));
-
-        // the top of the branch (L4) is ~2" behind the april tag
-        public static final double BRANCH_OFFSET_BEHIND_APRILTAG = Units.inchesToMeters(2.049849);
-        public static final double L4_HEIGHT = Units.inchesToMeters(72);
+        static {
+            for (int tag : BLUE_CORAL_STATION_TAG_IDS) {
+                CORAL_STATIONS.add(
+                        VisionConstants.aprilTagLayout.getTagPose(tag).get().toPose2d());
+            }
+            for (int tag : RED_CORAL_STATION_TAG_IDS) {
+                CORAL_STATIONS.add(
+                        VisionConstants.aprilTagLayout.getTagPose(tag).get().toPose2d());
+            }
+        }
 
         public static final Pose3d[] REEF_TAG_POSES = new Pose3d[RED_REEF_TAG_IDS.length + BLUE_REEF_TAG_IDS.length];
 

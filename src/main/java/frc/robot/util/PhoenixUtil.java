@@ -24,6 +24,8 @@ import com.ctre.phoenix6.signals.StaticFeedforwardSignValue;
 import com.ctre.phoenix6.sim.CANcoderSimState;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
@@ -177,5 +179,13 @@ public final class PhoenixUtil {
                 .withSteerFrictionVoltage(Volts.of(0.05))
                 // Adjust steer inertia
                 .withSteerInertia(KilogramSquareMeters.of(0.05));
+    }
+
+    public static DCMotor getKrakenX44(int numMotors) {
+        return new DCMotor(12, 4.05, 275, 1.4, Units.rotationsPerMinuteToRadiansPerSecond(7530), numMotors);
+    }
+
+    public static DCMotor getMinion(int numMotors) {
+        return new DCMotor(12, 3.1, 200.46, 1.43, Units.rotationsPerMinuteToRadiansPerSecond(7200), numMotors);
     }
 }

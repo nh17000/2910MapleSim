@@ -101,7 +101,10 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         double deltaTheta = dtSeconds * Units.radiansToRotations(rollerSim.getAngularVelocityRadPerSec());
         rollerAngularPosition += deltaTheta;
         if (hasCoral) {
-            coralPos = MathUtil.clamp(coralPos + EndEffectorConstants.LR_RADIUS * deltaTheta * 20, MIN_POS - POS_TOLERANCE, MAX_POS + POS_TOLERANCE);
+            coralPos = MathUtil.clamp(
+                    coralPos + EndEffectorConstants.LR_RADIUS * deltaTheta * 20,
+                    MIN_POS - POS_TOLERANCE,
+                    MAX_POS + POS_TOLERANCE);
         } else {
             coralPos = 0.0;
         }
@@ -313,15 +316,15 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                         // Obtain robot position from drive simulation
                         nearestCS.getTranslation(),
                         // The scoring mechanism is installed at this position on the robot
-                        new Translation2d(0, Math.random() * 2 - 1),
+                        new Translation2d(0, Math.random() * 3 - 1.5),
                         // Obtain robot speed from drive simulation
                         new ChassisSpeeds(),
                         // Obtain robot facing from drive simulation
-                        nearestCS.getRotation().plus(Rotation2d.fromDegrees(180 + Math.random() * 60 - 30)),
+                        nearestCS.getRotation().plus(Rotation2d.fromDegrees(Math.random() * 30 - 15)),
                         // The height at which the coral is ejected
                         Meters.of(1),
                         // The initial speed of the coral
-                        MetersPerSecond.of(Math.random() * 7.5 + 2.5),
+                        MetersPerSecond.of(2.5 + Math.random() * 5),
                         // The coral is ejected at this angle
                         Degrees.of(-55 + Math.random() * 30)));
 
