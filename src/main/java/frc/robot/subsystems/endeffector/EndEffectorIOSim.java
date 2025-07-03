@@ -10,6 +10,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
@@ -57,6 +58,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     private static final double INTAKE_POS = 0.1;
     private static final double MIN_POS = -0.05;
     private static final double POS_TOLERANCE = 0.01;
+    private static final double POS_COEFFICIENT = 25;
 
     private final IntakeSimulation coralGroundIntakeSim;
     private final IntakeSimulation algaeGroundIntakeSim;
@@ -102,7 +104,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         rollerAngularPosition += deltaTheta;
         if (hasCoral) {
             coralPos = MathUtil.clamp(
-                    coralPos + EndEffectorConstants.LR_RADIUS * deltaTheta * 20,
+                    coralPos + EndEffectorConstants.LR_RADIUS * deltaTheta * POS_COEFFICIENT,
                     MIN_POS - POS_TOLERANCE,
                     MAX_POS + POS_TOLERANCE);
         } else {
@@ -129,7 +131,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                 shootAlgae();
             }
         } else { // coral
-            horizontal = topVolts > 0.5; // intake horizontally if top rollers running
+            horizontal = Math.abs(topVolts) > 0.5; // intake horizontally if top rollers running
 
             if (leftVolts < -0.5) { // coral intake
                 dropFromCoralStation(); // drop coral from the station
@@ -139,7 +141,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                     coralGroundIntakeSim.startIntake();
                 } else { // intake coral in the air
                     coralGroundIntakeSim.stopIntake();
-                    // intakeCoralProjectiles();
+                    intakeCoralProjectiles();
                 }
             } else if (leftVolts > -0.5) { // coral outtake
                 coralGroundIntakeSim.stopIntake();
@@ -174,9 +176,14 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         while (iterator.hasNext()) {
             var gamePiece = iterator.next();
             if (gamePiece instanceof ReefscapeCoralOnFly) {
-                if (checkTolerance(intakePose.minus(gamePiece.getPose3d()))) {
+                Pose3d gamePiecePose = gamePiece.getPose3d();
+                Transform3d diff = intakePose.minus(gamePiecePose);
+                Translation3d velocity = gamePiece.getVelocity3dMPS();
+
+                // Only pick up if approaching and within tolerance
+                if (checkTolerance(diff) && isApproaching(intakePose, gamePiecePose, velocity)) {
                     iterator.remove();
-                    intookGamePiecePrevPose = gamePiece.getPose3d();
+                    intookGamePiecePrevPose = gamePiecePose;
                     setHasCoral(true);
                     intakingTimer.restart();
                     break;
@@ -200,6 +207,19 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         return difference.getTranslation().getNorm() < EndEffectorConstants.TRANSLATIONAL_TOLERANCE;
     }
 
+    private static boolean isApproaching(Pose3d intakePose, Pose3d gamePiecePose, Translation3d velocity) {
+        Translation3d currentVec = intakePose.getTranslation().minus(gamePiecePose.getTranslation());
+        double currentDist = currentVec.getNorm();
+
+        // Project the game piece's position 0.1 seconds into the future
+        double dt = 0.1; // seconds
+        Translation3d futurePosition = gamePiecePose.getTranslation().plus(velocity.times(dt));
+
+        double futureDist = intakePose.getTranslation().minus(futurePosition).getNorm();
+
+        return futureDist < currentDist;
+    }
+
     private void visualizeGamePieces() {
         Logger.recordOutput(
                 "FieldSimulation/Held Coral", hasCoral ? interpolateHeldPose(getHeldCoralPose()) : Pose3d.kZero);
@@ -221,6 +241,10 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     }
 
     private Transform3d getHeldCoralTransform() {
+        return horizontal ? getHeldHorizontalCoralTransform() : getHeldVerticalCoralTransform();
+    }
+
+    private Transform3d getHeldVerticalCoralTransform() {
         return wristTransformSupplier
                 .get()
                 .plus(VisualizerConstants.CORAL_TRANSFORM)
@@ -237,7 +261,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
     private Pose3d getHeldCoralPose() {
         Pose3d robotPose = new Pose3d(poseSupplier.get());
-        Transform3d coralTransform = horizontal ? getHeldHorizontalCoralTransform() : getHeldCoralTransform();
+        Transform3d coralTransform = getHeldCoralTransform();
         return robotPose.transformBy(coralTransform);
     }
 
@@ -250,6 +274,10 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         if (!hasCoral) return;
 
         Transform3d eeTransform = getHeldCoralTransform();
+
+        double ejectVel = rollerSim.getAngularVelocityRPM() / POS_COEFFICIENT;
+        if (horizontal) ejectVel = -Math.abs(ejectVel) * 0.75;
+        System.out.println("ejv: " + ejectVel);
 
         SimulatedArena.getInstance()
                 .addGamePieceProjectile(new ReefscapeCoralOnFly(
@@ -264,7 +292,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                         // The height at which the coral is ejected
                         eeTransform.getMeasureZ(),
                         // The initial speed of the coral
-                        MetersPerSecond.of(horizontal || !forwards ? 2 : -2),
+                        MetersPerSecond.of(ejectVel),
                         // The coral is ejected at this angle
                         eeTransform.getRotation().getMeasureAngle()));
 
@@ -287,11 +315,11 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                         chassisSpeedsSupplier.get(),
                         // Obtain robot facing from drive simulation
                         poseSupplier.get().getRotation(),
-                        // The height at which the coral is ejected
+                        // The height at which the algae is ejected
                         eeTransform.getMeasureZ(),
-                        // The initial speed of the coral
+                        // The initial speed of the algae
                         MetersPerSecond.of(2.910),
-                        // The coral is ejected at this angle
+                        // The algae is ejected at this angle
                         eeTransform.getRotation().getMeasureAngle()));
 
         hasAlgae = false;
@@ -313,15 +341,15 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
         SimulatedArena.getInstance()
                 .addGamePieceProjectile(new ReefscapeCoralOnFly(
-                        // Obtain robot position from drive simulation
+                        // Nearest Coral Station April Tag translation
                         nearestCS.getTranslation(),
-                        // The scoring mechanism is installed at this position on the robot
+                        // Shift left to right 1.5m along the Chute
                         new Translation2d(0, Math.random() * 3 - 1.5),
-                        // Obtain robot speed from drive simulation
+                        // The Coral Station is stationary
                         new ChassisSpeeds(),
-                        // Obtain robot facing from drive simulation
+                        // April tag yaw plus or minus 15 degrees
                         nearestCS.getRotation().plus(Rotation2d.fromDegrees(Math.random() * 30 - 15)),
-                        // The height at which the coral is ejected
+                        // Launch 1 meter above the ground
                         Meters.of(1),
                         // The initial speed of the coral
                         MetersPerSecond.of(2.5 + Math.random() * 5),

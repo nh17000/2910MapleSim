@@ -18,9 +18,9 @@ public class Arm extends SubsystemBase {
     @Getter
     private ArmState state = ArmState.STOWED;
 
-    private static LoggedTunableNumber tunablePivot = new LoggedTunableNumber("Arm/Tunable/Pivot", 0.0);
-    private static LoggedTunableNumber tunableExtension = new LoggedTunableNumber("Arm/Tunable/Extension", 0.0);
-    private static LoggedTunableNumber tunableWrist = new LoggedTunableNumber("Arm/Tunable/Wrist", 0.0);
+    private static final LoggedTunableNumber tunablePivot = new LoggedTunableNumber("Arm/Tunable Pivot", 0.0);
+    private static final LoggedTunableNumber tunableExtension = new LoggedTunableNumber("Arm/Tunable Extension", 0.0);
+    private static final LoggedTunableNumber tunableWrist = new LoggedTunableNumber("Arm/Tunable Wrist", 0.0);
 
     private ArmIO io;
     private final ArmIOInputsAutoLogged inputs = new ArmIOInputsAutoLogged();
@@ -35,7 +35,7 @@ public class Arm extends SubsystemBase {
         Logger.processInputs("Arm", inputs);
 
         ArmPosition setpoint = state.position;
-        if (state == ArmState.CORAL_STATION) {
+        if (state == ArmState.TUNABLE) {
             setpoint = new ArmPosition(
                     Units.degreesToRadians(tunablePivot.get()),
                     Units.inchesToMeters(tunableExtension.get()),

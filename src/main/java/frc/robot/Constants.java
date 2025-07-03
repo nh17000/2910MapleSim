@@ -74,7 +74,8 @@ public final class Constants {
             LOW_ALGAE_BACKWARDS(107, 0, 80),
             HIGH_ALGAE(63, 14, -30),
             HIGH_ALGAE_BACKWARDS(100, 16, 80),
-            LOLLIPOP(0, 6, 42.5); // or procesor
+            LOLLIPOP(0, 6, 42.5), // or procesor
+            TUNABLE(0, 0, 125); // adjustable setpoints
 
             public final ArmPosition position;
 
@@ -94,8 +95,10 @@ public final class Constants {
                             return isForwards ? ArmState.L3 : ArmState.L3_BACKWARDS;
                         case 2:
                             return isForwards ? ArmState.L2 : ArmState.L2_BACKWARDS;
-                        default:
+                        case 1:
                             return ArmState.L1;
+                        default:
+                            return ArmState.CORAL_STATION;
                     }
                 } else {
                     switch (level) {
@@ -105,8 +108,10 @@ public final class Constants {
                             return isForwards ? ArmState.HIGH_ALGAE : ArmState.HIGH_ALGAE_BACKWARDS;
                         case 2:
                             return isForwards ? ArmState.LOW_ALGAE : ArmState.LOW_ALGAE_BACKWARDS;
-                        default:
+                        case 1:
                             return ArmState.LOLLIPOP;
+                        default:
+                            return ArmState.STOWED;
                     }
                 }
             }
@@ -223,9 +228,9 @@ public final class Constants {
 
     public static final class EndEffectorConstants {
         public enum EEState {
-            VERTICAL_CORAL_INTAKE(-0.3, -0.3),
-            VERTICAL_CORAL_OUTTAKE_FWD(-0.5, -0.5),
-            VERTICAL_CORAL_OUTTAKE_BWD(0.5, -0.5),
+            VERTICAL_CORAL_INTAKE(-0.3, 0.0),
+            VERTICAL_CORAL_OUTTAKE_FWD(-0.5, 0.0),
+            VERTICAL_CORAL_OUTTAKE_BWD(0.5, 0.0),
             HORIZONTAL_CORAL_INTAKE(-0.3, 0.3),
             HORIZONTAL_CORAL_OUTTAKE(0.5, 0.5),
             ALGAE_INTAKE(0.0, 0.7),
@@ -291,12 +296,10 @@ public final class Constants {
     }
 
     public static final class AlignConstants {
-        // public static final double ALIGN_KS = 0.1;
-
         public static final double BRANCH_SPACING = Units.inchesToMeters(12.97 / 2.0);
 
-        // target relative
-        public static final double REEF_ALIGN_MID_TX = 0.08;
+        // tag relative setpoints in meters
+        public static final double REEF_ALIGN_MID_TX = 0.0;
         public static final double REEF_ALIGN_LEFT_TX = -BRANCH_SPACING; // - 0.05 + 0.01;
         public static final double REEF_ALIGN_RIGHT_TX = BRANCH_SPACING; // - 0.03 + 0.02;
         public static final double REEF_ALIGN_TZ = Units.inchesToMeters(22); // 18
@@ -304,13 +307,26 @@ public final class Constants {
         public static final double STATION_ALIGN_TX = 0.0;
         public static final double STATION_ALIGN_TZ = Units.inchesToMeters(18);
 
-        public static final double REEF_kP = 5.0;
-        public static final double REEF_kI = 0.0;
-        public static final double REEF_kD = 0.0;
+        public static final Translation2d LEFT_BRANCH_OFFSET =
+                new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_LEFT_TX);
+        public static final Translation2d RIGHT_BRANCH_OFFSET =
+                new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_RIGHT_TX);
+        public static final Translation2d MID_OFFSET =
+                new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_MID_TX);
+        public static final Translation2d STATION_OFFSET =
+                new Translation2d(AlignConstants.STATION_ALIGN_TZ, AlignConstants.STATION_ALIGN_TX);
 
-        public static final double ROT_REEF_kP = 5.0;
-        public static final double ROT_REEF_kI = 0.0;
-        public static final double ROT_REEF_kD = 0.0;
+        public static final double DRIVE_kP = 5.0;
+        public static final double DRIVE_kI = 0.0;
+        public static final double DRIVE_kD = 0.0;
+        public static final double MAX_DRIVE_VELOCITY = 4.73;
+        public static final double MAX_DRIVE_ACCELERATION = 20;
+
+        public static final double ROT_kP = 5.0;
+        public static final double ROT_kI = 0.0;
+        public static final double ROT_kD = 0.0;
+        public static final double MAX_ROT_VELOCITY = 8;
+        public static final double MAX_ROT_ACCELERATION = 20;
 
         public static final double ALIGN_ROT_TOLERANCE = Units.degreesToRadians(3);
         public static final double ALIGN_TRANSLATION_TOLERANCE = Units.inchesToMeters(2);

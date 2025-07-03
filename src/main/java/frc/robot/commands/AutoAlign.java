@@ -15,15 +15,6 @@ import lombok.Setter;
 import org.littletonrobotics.junction.AutoLogOutput;
 
 public class AutoAlign {
-    private static final Translation2d LEFT_BRANCH_OFFSET =
-            new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_LEFT_TX);
-    private static final Translation2d RIGHT_BRANCH_OFFSET =
-            new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_RIGHT_TX);
-    private static final Translation2d MID_OFFSET =
-            new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_MID_TX);
-    private static final Translation2d STATION_OFFSET =
-            new Translation2d(AlignConstants.STATION_ALIGN_TZ, AlignConstants.STATION_ALIGN_TX);
-
     private Pose2d targetPose = Pose2d.kZero;
 
     private Debouncer isAlignedDebouncer = new Debouncer(0.2);
@@ -40,15 +31,15 @@ public class AutoAlign {
     }
 
     public Command reefAlignLeft(Drive drive) {
-        return reefAlign(drive, LEFT_BRANCH_OFFSET);
+        return reefAlign(drive, AlignConstants.LEFT_BRANCH_OFFSET);
     }
 
     public Command reefAlignMid(Drive drive) {
-        return reefAlign(drive, MID_OFFSET);
+        return reefAlign(drive, AlignConstants.MID_OFFSET);
     }
 
     public Command reefAlignRight(Drive drive) {
-        return reefAlign(drive, RIGHT_BRANCH_OFFSET);
+        return reefAlign(drive, AlignConstants.RIGHT_BRANCH_OFFSET);
     }
 
     private Command reefAlign(Drive drive, Translation2d offset) {
@@ -81,7 +72,7 @@ public class AutoAlign {
         targetPose = robotSupplier
                 .get()
                 .nearest(FieldConstants.CORAL_STATIONS)
-                .transformBy(new Transform2d(STATION_OFFSET, Rotation2d.k180deg));
+                .transformBy(new Transform2d(AlignConstants.STATION_OFFSET, Rotation2d.k180deg));
         return targetPose;
     }
 

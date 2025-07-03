@@ -42,20 +42,26 @@ public class EndEffector extends SubsystemBase {
     public void intake() {
         if (hasCoral() || hasAlgae()) {
             state = EEState.OFF;
-        } else if (isCoral && isHorizontal) {
-            state = EEState.HORIZONTAL_CORAL_INTAKE;
         } else if (isCoral) {
-            state = EEState.VERTICAL_CORAL_INTAKE;
+            if (isHorizontal) {
+                state = EEState.HORIZONTAL_CORAL_INTAKE;
+            } else {
+                state = EEState.VERTICAL_CORAL_INTAKE;
+            }
         } else {
             state = EEState.ALGAE_INTAKE;
         }
     }
 
     public void outtake(boolean isForwards) {
-        if (isCoral && isForwards) {
-            state = EEState.VERTICAL_CORAL_OUTTAKE_FWD;
-        } else if (isCoral) {
-            state = EEState.VERTICAL_CORAL_OUTTAKE_BWD;
+        if (isCoral) {
+            if (isHorizontal) {
+                state = EEState.HORIZONTAL_CORAL_OUTTAKE;
+            } else if (isForwards) {
+                state = EEState.VERTICAL_CORAL_OUTTAKE_FWD;
+            } else {
+                state = EEState.VERTICAL_CORAL_OUTTAKE_BWD;
+            }
         } else {
             state = EEState.ALGAE_OUTTAKE;
         }

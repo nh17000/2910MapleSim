@@ -19,28 +19,20 @@ import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
 public class DriveToPose extends Command {
-    private static LoggedTunableNumber t_kP = new LoggedTunableNumber("Align/kP", AlignConstants.REEF_kP);
-    private static LoggedTunableNumber t_kI = new LoggedTunableNumber("Align/kI", AlignConstants.REEF_kI);
-    private static LoggedTunableNumber t_kD = new LoggedTunableNumber("Align/kD", AlignConstants.REEF_kD);
-    private static LoggedTunableNumber t_MaxV = new LoggedTunableNumber("Align/Max Vel", 4.73);
-    private static LoggedTunableNumber t_MaxA = new LoggedTunableNumber("Align/Max Acc", 20);
+    private static final LoggedTunableNumber drivekP = new LoggedTunableNumber("Align/kP", AlignConstants.DRIVE_kP);
+    private static final LoggedTunableNumber drivekI = new LoggedTunableNumber("Align/kI", AlignConstants.DRIVE_kI);
+    private static final LoggedTunableNumber drivekD = new LoggedTunableNumber("Align/kD", AlignConstants.DRIVE_kD);
+    private static final LoggedTunableNumber driveMaxVel = new LoggedTunableNumber("Align/Max Vel", 4.73);
+    private static final LoggedTunableNumber driveMaxAcc = new LoggedTunableNumber("Align/Max Acc", 20);
 
-    private static LoggedTunableNumber t_RotkP = new LoggedTunableNumber("Align/Rot kP", AlignConstants.ROT_REEF_kP);
-    private static LoggedTunableNumber t_RotkI = new LoggedTunableNumber("Align/Rot kI", AlignConstants.ROT_REEF_kI);
-    private static LoggedTunableNumber t_RotkD = new LoggedTunableNumber("Align/Rot kD", AlignConstants.ROT_REEF_kD);
-    private static LoggedTunableNumber t_RotMaxV = new LoggedTunableNumber("Align/Rot Max Vel", 8);
-    private static LoggedTunableNumber t_RotMaxA = new LoggedTunableNumber("Align/Rot Max Acc", 20);
+    private static final LoggedTunableNumber rotkP = new LoggedTunableNumber("Align/Rot kP", AlignConstants.ROT_kP);
+    private static final LoggedTunableNumber rotkI = new LoggedTunableNumber("Align/Rot kI", AlignConstants.ROT_kI);
+    private static final LoggedTunableNumber rotkD = new LoggedTunableNumber("Align/Rot kD", AlignConstants.ROT_kD);
+    private static final LoggedTunableNumber rotMaxVel = new LoggedTunableNumber("Align/Rot Max Vel", 8);
+    private static final LoggedTunableNumber rotMaxAcc = new LoggedTunableNumber("Align/Rot Max Acc", 20);
 
-    private final ProfiledPIDController translationController = new ProfiledPIDController(
-            AlignConstants.REEF_kP,
-            AlignConstants.REEF_kI,
-            AlignConstants.REEF_kD,
-            new TrapezoidProfile.Constraints(8, 20));
-    private final ProfiledPIDController rotationController = new ProfiledPIDController(
-            AlignConstants.ROT_REEF_kP,
-            AlignConstants.ROT_REEF_kI,
-            AlignConstants.ROT_REEF_kD,
-            new TrapezoidProfile.Constraints(8, 20));
+    private ProfiledPIDController translationController;
+    private ProfiledPIDController rotationController;
 
     private Drive drive;
     private Supplier<Pose2d> targetSupplier;
@@ -51,6 +43,18 @@ public class DriveToPose extends Command {
         this.drive = drive;
         this.targetSupplier = target;
         this.robotSupplier = robot;
+
+        translationController = new ProfiledPIDController(
+                drivekP.get(),
+                drivekI.get(),
+                drivekD.get(),
+                new TrapezoidProfile.Constraints(driveMaxVel.get(), driveMaxAcc.get()));
+
+        rotationController = new ProfiledPIDController(
+                rotkP.get(),
+                rotkI.get(),
+                rotkD.get(),
+                new TrapezoidProfile.Constraints(rotMaxVel.get(), rotMaxAcc.get()));
 
         rotationController.enableContinuousInput(-Math.PI, Math.PI);
 
@@ -113,17 +117,18 @@ public class DriveToPose extends Command {
     }
 
     private void updatePID() {
-        if (t_kP.hasChanged(hashCode()) || t_kI.hasChanged(hashCode()) || t_kD.hasChanged(hashCode())) {
-            translationController.setPID(t_kP.get(), t_kI.get(), t_kD.get());
+        if (drivekP.hasChanged(hashCode()) || drivekI.hasChanged(hashCode()) || drivekD.hasChanged(hashCode())) {
+            translationController.setPID(drivekP.get(), drivekI.get(), drivekD.get());
         }
-        if (t_RotkP.hasChanged(hashCode()) || t_RotkI.hasChanged(hashCode()) || t_RotkD.hasChanged(hashCode())) {
-            rotationController.setPID(t_RotkP.get(), t_RotkI.get(), t_RotkD.get());
+        if (rotkP.hasChanged(hashCode()) || rotkI.hasChanged(hashCode()) || rotkD.hasChanged(hashCode())) {
+            rotationController.setPID(rotkP.get(), rotkI.get(), rotkD.get());
         }
-        if (t_MaxV.hasChanged(hashCode()) || t_MaxA.hasChanged(hashCode())) {
-            translationController.setConstraints(new TrapezoidProfile.Constraints(t_MaxV.get(), t_MaxA.get()));
+        if (driveMaxVel.hasChanged(hashCode()) || driveMaxAcc.hasChanged(hashCode())) {
+            translationController.setConstraints(
+                    new TrapezoidProfile.Constraints(driveMaxVel.get(), driveMaxAcc.get()));
         }
-        if (t_RotMaxV.hasChanged(hashCode()) || t_RotMaxA.hasChanged(hashCode())) {
-            rotationController.setConstraints(new TrapezoidProfile.Constraints(t_RotMaxV.get(), t_RotMaxA.get()));
+        if (rotMaxVel.hasChanged(hashCode()) || rotMaxAcc.hasChanged(hashCode())) {
+            rotationController.setConstraints(new TrapezoidProfile.Constraints(rotMaxVel.get(), rotMaxAcc.get()));
         }
     }
 }

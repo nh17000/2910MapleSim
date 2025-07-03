@@ -173,6 +173,12 @@ public class RobotContainer {
                 () -> -controller.getRightX(),
                 true));
 
+        endEffector.setDefaultCommand(new RunCommand(() -> endEffector.intake(), endEffector));
+
+        // Controls can be found here
+        // https://docs.google.com/spreadsheets/d/1LB6nTpDfxbCZiFzkx_2DcHvuDDgMP4XP9NIPqSqYTP4/
+
+        // --- Driver Controls ---
         controller.povUp().whileTrue(align.stationAlign(drive));
         controller.povLeft().whileTrue(align.reefAlignLeft(drive));
         controller.povDown().whileTrue(align.reefAlignMid(drive));
@@ -186,20 +192,23 @@ public class RobotContainer {
                 : () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), new Rotation2d())); // zero gyro
         controller.start().onTrue(Commands.runOnce(resetGyro, drive).ignoringDisable(true));
 
-        controller.leftBumper().or(opController.back()).onTrue(new RunCommand(() -> endEffector.intake(), endEffector));
         controller
-                .rightBumper()
-                .whileTrue(new RunCommand(() -> endEffector.outtake(align.isForwards()), endEffector))
-                .onFalse(new RunCommand(() -> endEffector.intake(), endEffector));
-
-        opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(true)));
-        opController.rightBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(false)));
-        opController.start().onTrue(arm.applyState(ArmState.CORAL_STATION));
-        opController
-                .back()
+                .leftBumper()
                 .and(() -> !endEffector.hasAlgae() && !endEffector.hasCoral())
                 .onTrue(arm.applyState(ArmState.GROUND_INTAKE))
                 .onFalse(arm.applyState(ArmState.STOWED));
+        controller.rightBumper().whileTrue(new RunCommand(() -> endEffector.outtake(align.isForwards()), endEffector));
+
+        // --- Operator Controls ---
+        opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(true)));
+        opController.rightBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(false)));
+
+        opController.start().onTrue(new InstantCommand(() -> endEffector.setHorizontal(true)));
+        opController.back().onTrue(new InstantCommand(() -> endEffector.setHorizontal(false)));
+
+        opController.povLeft().onTrue(arm.applyState(ArmState.TUNABLE));
+        opController.povRight().onTrue(arm.applyState(ArmState.CORAL_STATION));
+
         opController
                 .a()
                 .onTrue(arm.followStateSupplier(() -> ArmState.of(1, endEffector.isCoral(), align.isForwards())));
