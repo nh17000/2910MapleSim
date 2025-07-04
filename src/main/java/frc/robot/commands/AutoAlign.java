@@ -1,5 +1,6 @@
 package frc.robot.commands;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -8,6 +9,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.AlignConstants;
 import frc.robot.Constants.FieldConstants;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.drive.Drive;
 import java.util.function.Supplier;
 import lombok.Getter;
@@ -59,9 +61,8 @@ public class AutoAlign {
 
         isForwards = Math.abs(fwdError) < Math.abs(bwdError);
 
-        targetPose = tagPose.transformBy(new Transform2d(offset, isForwards ? Rotation2d.k180deg : Rotation2d.kZero));
-
-        return targetPose;
+        return targetPose =
+                tagPose.transformBy(new Transform2d(offset, isForwards ? Rotation2d.k180deg : Rotation2d.kZero));
     }
 
     public Command stationAlign(Drive drive) {
@@ -69,11 +70,29 @@ public class AutoAlign {
     }
 
     private Pose2d findStationTargetPose() {
-        targetPose = robotSupplier
+        return targetPose = robotSupplier
                 .get()
                 .nearest(FieldConstants.CORAL_STATIONS)
                 .transformBy(new Transform2d(AlignConstants.STATION_OFFSET, Rotation2d.k180deg));
-        return targetPose;
+    }
+
+    public Command netAlign(Drive drive) {
+        return new DriveToPose(drive, this::findNetTargetPose, robotSupplier);
+    }
+
+    private Pose2d findNetTargetPose() {
+        Pose2d robotPose = robotSupplier.get();
+        boolean onRedHalf = robotPose.getX() > FieldConstants.BARGE_X;
+
+        double targetX = FieldConstants.BARGE_X + AlignConstants.NET_ALIGN_TZ * (onRedHalf ? 1 : -1);
+
+        double minY = RobotContainer.isRedAlliance() ? AlignConstants.NET_RED_Y[0] : AlignConstants.NET_BLUE_Y[0];
+        double maxY = RobotContainer.isRedAlliance() ? AlignConstants.NET_RED_Y[1] : AlignConstants.NET_BLUE_Y[1];
+        double targetY = MathUtil.clamp(robotPose.getY(), minY, maxY);
+
+        Rotation2d targetTheta = onRedHalf ? Rotation2d.k180deg : Rotation2d.kZero;
+
+        return targetPose = new Pose2d(targetX, targetY, targetTheta);
     }
 
     @AutoLogOutput

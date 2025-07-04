@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -179,7 +180,10 @@ public class RobotContainer {
         // https://docs.google.com/spreadsheets/d/1LB6nTpDfxbCZiFzkx_2DcHvuDDgMP4XP9NIPqSqYTP4/
 
         // --- Driver Controls ---
-        controller.povUp().whileTrue(align.stationAlign(drive));
+        controller
+                .povUp()
+                .whileTrue(
+                        new ConditionalCommand(align.stationAlign(drive), align.netAlign(drive), endEffector::isCoral));
         controller.povLeft().whileTrue(align.reefAlignLeft(drive));
         controller.povDown().whileTrue(align.reefAlignMid(drive));
         controller.povRight().whileTrue(align.reefAlignRight(drive));

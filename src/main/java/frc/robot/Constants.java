@@ -297,24 +297,12 @@ public final class Constants {
 
     public static final class AlignConstants {
         public static final double BRANCH_SPACING = Units.inchesToMeters(12.97 / 2.0);
-
-        // tag relative setpoints in meters
-        public static final double REEF_ALIGN_MID_TX = 0.0;
-        public static final double REEF_ALIGN_LEFT_TX = -BRANCH_SPACING; // - 0.05 + 0.01;
-        public static final double REEF_ALIGN_RIGHT_TX = BRANCH_SPACING; // - 0.03 + 0.02;
         public static final double REEF_ALIGN_TZ = Units.inchesToMeters(22); // 18
 
-        public static final double STATION_ALIGN_TX = 0.0;
-        public static final double STATION_ALIGN_TZ = Units.inchesToMeters(18);
-
-        public static final Translation2d LEFT_BRANCH_OFFSET =
-                new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_LEFT_TX);
-        public static final Translation2d RIGHT_BRANCH_OFFSET =
-                new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_RIGHT_TX);
-        public static final Translation2d MID_OFFSET =
-                new Translation2d(AlignConstants.REEF_ALIGN_TZ, AlignConstants.REEF_ALIGN_MID_TX);
-        public static final Translation2d STATION_OFFSET =
-                new Translation2d(AlignConstants.STATION_ALIGN_TZ, AlignConstants.STATION_ALIGN_TX);
+        public static final Translation2d LEFT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, -BRANCH_SPACING);
+        public static final Translation2d RIGHT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, BRANCH_SPACING);
+        public static final Translation2d MID_OFFSET = new Translation2d(REEF_ALIGN_TZ, 0.0);
+        public static final Translation2d STATION_OFFSET = new Translation2d(Units.inchesToMeters(18), 0.0);
 
         public static final double DRIVE_kP = 5.0;
         public static final double DRIVE_kI = 0.0;
@@ -330,6 +318,14 @@ public final class Constants {
 
         public static final double ALIGN_ROT_TOLERANCE = Units.degreesToRadians(3);
         public static final double ALIGN_TRANSLATION_TOLERANCE = Units.inchesToMeters(2);
+
+        public static final double NET_ALIGN_TZ = Units.inchesToMeters(32);
+        public static final double MIN_DIST_TO_WALL = Units.inchesToMeters(28);
+        public static final double[] NET_RED_Y = {MIN_DIST_TO_WALL, FieldConstants.FIELD_WIDTH / 2.0 - MIN_DIST_TO_WALL
+        };
+        public static final double[] NET_BLUE_Y = {
+            FieldConstants.FIELD_WIDTH / 2.0 + MIN_DIST_TO_WALL, FieldConstants.FIELD_WIDTH - MIN_DIST_TO_WALL
+        };
     }
 
     public static final class FieldConstants {
