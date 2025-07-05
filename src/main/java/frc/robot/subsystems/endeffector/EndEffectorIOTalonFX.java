@@ -23,7 +23,7 @@ public abstract class EndEffectorIOTalonFX implements EndEffectorIO {
 
     @Override
     public void setLeftSpeed(double speed) {
-        left.setVoltage(speed * 12);
+        left.set(speed);
     }
 
     @Override

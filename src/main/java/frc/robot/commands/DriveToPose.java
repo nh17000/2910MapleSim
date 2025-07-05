@@ -7,7 +7,6 @@ package frc.robot.commands;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -22,14 +21,18 @@ public class DriveToPose extends Command {
     private static final LoggedTunableNumber drivekP = new LoggedTunableNumber("Align/kP", AlignConstants.DRIVE_kP);
     private static final LoggedTunableNumber drivekI = new LoggedTunableNumber("Align/kI", AlignConstants.DRIVE_kI);
     private static final LoggedTunableNumber drivekD = new LoggedTunableNumber("Align/kD", AlignConstants.DRIVE_kD);
-    private static final LoggedTunableNumber driveMaxVel = new LoggedTunableNumber("Align/Max Vel", 4.73);
-    private static final LoggedTunableNumber driveMaxAcc = new LoggedTunableNumber("Align/Max Acc", 20);
+    private static final LoggedTunableNumber driveMaxVel =
+            new LoggedTunableNumber("Align/Max Vel", AlignConstants.MAX_DRIVE_VELOCITY);
+    private static final LoggedTunableNumber driveMaxAcc =
+            new LoggedTunableNumber("Align/Max Acc", AlignConstants.MAX_DRIVE_ACCELERATION);
 
     private static final LoggedTunableNumber rotkP = new LoggedTunableNumber("Align/Rot kP", AlignConstants.ROT_kP);
     private static final LoggedTunableNumber rotkI = new LoggedTunableNumber("Align/Rot kI", AlignConstants.ROT_kI);
     private static final LoggedTunableNumber rotkD = new LoggedTunableNumber("Align/Rot kD", AlignConstants.ROT_kD);
-    private static final LoggedTunableNumber rotMaxVel = new LoggedTunableNumber("Align/Rot Max Vel", 8);
-    private static final LoggedTunableNumber rotMaxAcc = new LoggedTunableNumber("Align/Rot Max Acc", 20);
+    private static final LoggedTunableNumber rotMaxVel =
+            new LoggedTunableNumber("Align/Rot Max Vel", AlignConstants.MAX_ROT_VELOCITY);
+    private static final LoggedTunableNumber rotMaxAcc =
+            new LoggedTunableNumber("Align/Rot Max Acc", AlignConstants.MAX_ROT_ACCELERATION);
 
     private ProfiledPIDController translationController;
     private ProfiledPIDController rotationController;
@@ -97,11 +100,6 @@ public class DriveToPose extends Command {
                 targetPose.getRotation().minus(currentPose.getRotation()).getDegrees());
         Logger.recordOutput("DriveToPose/Translation Velocity", translationVelocity);
         Logger.recordOutput("DriveToPose/Direction to Target", directionToTarget);
-        Logger.recordOutput(
-                "DriveToPose/Future",
-                currentPose.transformBy(new Transform2d(
-                        new Translation2d(translationVelocity.getX() * 0.1, translationVelocity.getY() * 0.1),
-                        Rotation2d.fromRadians(rotationOutput * 0.1))));
     }
 
     // Called once the command ends or is interrupted.

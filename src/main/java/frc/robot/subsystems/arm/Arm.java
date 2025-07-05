@@ -49,6 +49,7 @@ public class Arm extends SubsystemBase {
         Logger.recordOutput("Arm/Pivot Setpoint Rots", getPivotMotorRots(setpoint.getPivotRads()));
         Logger.recordOutput("Arm/Extension Setpoint Rots", getExtensionMotorRots(setpoint.getExtensionMeters()));
         Logger.recordOutput("Arm/Wrist Setpoint Rots", getWristMotorRots(setpoint.getWristRads()));
+        Logger.recordOutput("Arm/Component Setpoints", state.position.getComponentTransforms());
     }
 
     public Command applyState(ArmState desiredState) {

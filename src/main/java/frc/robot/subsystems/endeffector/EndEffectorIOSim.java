@@ -6,10 +6,8 @@ import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.system.plant.LinearSystemId;
@@ -18,9 +16,9 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import frc.robot.Constants;
 import frc.robot.Constants.EndEffectorConstants;
-import frc.robot.Constants.FieldConstants;
 import frc.robot.Constants.VisualizerConstants;
 import frc.robot.util.AlgaeHandler;
+import frc.robot.util.CoralStationSim;
 import java.util.function.Supplier;
 import org.ironmaple.simulation.IntakeSimulation;
 import org.ironmaple.simulation.SimulatedArena;
@@ -119,6 +117,8 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
     private void updateGamePieces(double leftVolts, double topVolts) {
         if (Math.abs(leftVolts) < 0.1) { // algae
+            coralGroundIntakeSim.stopIntake();
+
             if (topVolts > 0.5) { // algae intake
                 if (getHeldAlgaeTransform().getMeasureZ().lt(Inches.of(16))) {
                     // intake algae on the ground
@@ -127,11 +127,15 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                     algaeGroundIntakeSim.stopIntake();
                     intakeReefAlgae();
                 }
-            } else if (topVolts < -0.5) { // algae outtake
-                shootAlgae();
+            } else {
+                algaeGroundIntakeSim.stopIntake();
+                if (topVolts < -0.5) { // algae outtake
+                    shootAlgae();
+                }
             }
         } else { // coral
             horizontal = Math.abs(topVolts) > 0.5; // intake horizontally if top rollers running
+            algaeGroundIntakeSim.stopIntake();
 
             if (leftVolts < -0.5) { // coral intake
                 dropFromCoralStation(); // drop coral from the station
@@ -143,14 +147,16 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                     coralGroundIntakeSim.stopIntake();
                     intakeCoralProjectiles();
                 }
-            } else if (leftVolts > -0.5) { // coral outtake
+            } else {
                 coralGroundIntakeSim.stopIntake();
             }
         }
 
         if (hasCoral != coralGroundIntakeSim.getGamePiecesAmount() > 0) {
-            if (!hasCoral) setHasCoral(true); // game piece intook
-            else coralGroundIntakeSim.addGamePieceToIntake(); // preload
+            if (!hasCoral) {
+                hasCoral = true; // game piece intook
+                coralPos = INTAKE_POS;
+            } else coralGroundIntakeSim.addGamePieceToIntake(); // preload
         }
 
         if (hasAlgae != algaeGroundIntakeSim.getGamePiecesAmount() > 0) {
@@ -184,7 +190,8 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
                 if (checkTolerance(diff) && isApproaching(intakePose, gamePiecePose, velocity)) {
                     iterator.remove();
                     intookGamePiecePrevPose = gamePiecePose;
-                    setHasCoral(true);
+                    hasCoral = true;
+                    coralPos = INTAKE_POS;
                     intakingTimer.restart();
                     break;
                 }
@@ -277,26 +284,18 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
         double ejectVel = rollerSim.getAngularVelocityRPM() / POS_COEFFICIENT;
         if (horizontal) ejectVel = -Math.abs(ejectVel) * 0.75;
-        System.out.println("ejv: " + ejectVel);
 
         SimulatedArena.getInstance()
                 .addGamePieceProjectile(new ReefscapeCoralOnFly(
-                        // Obtain robot position from drive simulation
                         poseSupplier.get().getTranslation(),
-                        // The scoring mechanism is installed at this position on the robot
                         eeTransform.getTranslation().toTranslation2d(),
-                        // Obtain robot speed from drive simulation
                         chassisSpeedsSupplier.get(),
-                        // Obtain robot facing from drive simulation
                         poseSupplier.get().getRotation(),
-                        // The height at which the coral is ejected
                         eeTransform.getMeasureZ(),
-                        // The initial speed of the coral
                         MetersPerSecond.of(ejectVel),
-                        // The coral is ejected at this angle
                         eeTransform.getRotation().getMeasureAngle()));
 
-        setHasCoral(false);
+        hasCoral = false;
         coralGroundIntakeSim.obtainGamePieceFromIntake();
     }
 
@@ -307,19 +306,12 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
         SimulatedArena.getInstance()
                 .addGamePieceProjectile(new ReefscapeAlgaeOnFly(
-                        // Obtain robot position from drive simulation
                         poseSupplier.get().getTranslation(),
-                        // The scoring mechanism is installed at this position on the robot
                         eeTransform.getTranslation().toTranslation2d(),
-                        // Obtain robot speed from drive simulation
                         chassisSpeedsSupplier.get(),
-                        // Obtain robot facing from drive simulation
                         poseSupplier.get().getRotation(),
-                        // The height at which the algae is ejected
                         eeTransform.getMeasureZ(),
-                        // The initial speed of the algae
                         MetersPerSecond.of(2.910),
-                        // The algae is ejected at this angle
                         eeTransform.getRotation().getMeasureAngle()));
 
         hasAlgae = false;
@@ -328,6 +320,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
     private void dropFromCoralStation() {
         if (hasCoral) return;
+
         if (droppingTimer.get() > EndEffectorConstants.DROP_COOLDOWN) {
             droppingTimer.stop();
             droppingTimer.reset();
@@ -336,33 +329,15 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         }
         if (SimulatedArena.getInstance().gamePiecesOnField().size() > 30) return;
 
-        Pose3d eePose = getHeldCoralPose();
-        Pose2d nearestCS = eePose.toPose2d().nearest(FieldConstants.CORAL_STATIONS);
+        Pose2d eePose = getHeldCoralPose().toPose2d();
+        Pose2d nearestCS = CoralStationSim.getNearestStation(eePose);
 
-        SimulatedArena.getInstance()
-                .addGamePieceProjectile(new ReefscapeCoralOnFly(
-                        // Nearest Coral Station April Tag translation
-                        nearestCS.getTranslation(),
-                        // Shift left to right 1.5m along the Chute
-                        new Translation2d(0, Math.random() * 3 - 1.5),
-                        // The Coral Station is stationary
-                        new ChassisSpeeds(),
-                        // April tag yaw plus or minus 15 degrees
-                        nearestCS.getRotation().plus(Rotation2d.fromDegrees(Math.random() * 30 - 15)),
-                        // Launch 1 meter above the ground
-                        Meters.of(1),
-                        // The initial speed of the coral
-                        MetersPerSecond.of(2.5 + Math.random() * 5),
-                        // The coral is ejected at this angle
-                        Degrees.of(-55 + Math.random() * 30)));
+        if (eePose.minus(nearestCS).getTranslation().getNorm() < EndEffectorConstants.TRANSLATIONAL_TOLERANCE) {
+            CoralStationSim.drop(nearestCS, false);
+        } else {
+            CoralStationSim.drop(nearestCS, true);
+        }
 
         droppingTimer.restart();
-    }
-
-    private void setHasCoral(boolean flag) {
-        if (hasCoral != flag && flag) {
-            coralPos = INTAKE_POS;
-        }
-        hasCoral = flag;
     }
 }
