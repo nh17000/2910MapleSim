@@ -25,7 +25,6 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
-import frc.robot.subsystems.arm.Arm;
 import frc.robot.subsystems.arm.ArmPosition;
 import frc.robot.subsystems.vision.VisionConstants;
 import frc.robot.util.PhoenixUtil;
@@ -136,8 +135,8 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 25;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = Arm.getPivotMotorRots(Units.degreesToRadians(1000));
-            config.MotionMagic.MotionMagicAcceleration = Arm.getPivotMotorRots(Units.degreesToRadians(600));
+            config.MotionMagic.MotionMagicCruiseVelocity = Units.degreesToRadians(1000) / PIVOT_P_COEFFICIENT;
+            config.MotionMagic.MotionMagicAcceleration = Units.degreesToRadians(600) / PIVOT_P_COEFFICIENT;
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -161,8 +160,8 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 30;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = Arm.getExtensionMotorRots(Units.inchesToMeters(200));
-            config.MotionMagic.MotionMagicAcceleration = Arm.getExtensionMotorRots(Units.inchesToMeters(400));
+            config.MotionMagic.MotionMagicCruiseVelocity = Units.inchesToMeters(200) / EXTENSION_P_COEFFICIENT;
+            config.MotionMagic.MotionMagicAcceleration = Units.inchesToMeters(400) / EXTENSION_P_COEFFICIENT;
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -186,8 +185,8 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 30;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = Arm.getWristMotorRots(Units.degreesToRadians(2000));
-            config.MotionMagic.MotionMagicAcceleration = Arm.getWristMotorRots(Units.degreesToRadians(4500));
+            config.MotionMagic.MotionMagicCruiseVelocity = Units.degreesToRadians(2000) / WRIST_P_COEFFICIENT;
+            config.MotionMagic.MotionMagicAcceleration = Units.degreesToRadians(4500) / WRIST_P_COEFFICIENT;
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -220,15 +219,19 @@ public final class Constants {
         public static final double ARM_MASS_KG = Units.lbsToKilograms(20);
         public static final double ARM_SHOULDER_TO_WRIST_LENGTH = VisualizerConstants.WRIST_OFFSET.getNorm();
 
+        public static final double PIVOT_P_COEFFICIENT = 2 * Math.PI / PIVOT_GEAR_RATIO;
         public static final double PIVOT_MIN_ANGLE = 0;
         public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(120);
         public static final DCMotor PIVOT_MOTORS = DCMotor.getKrakenX60(3);
 
         public static final double EXTENSION_DRUM_RADIUS = Units.inchesToMeters(0.25 * 16.0 / Math.PI * 0.5); // ~0.64"
+        public static final double EXTENSION_P_COEFFICIENT =
+                2.0 * Math.PI * EXTENSION_DRUM_RADIUS / EXTENSION_GEAR_RATIO;
         public static final double EXTENSION_MIN_LENGTH = 0;
         public static final double EXTENSION_MAX_LENGTH = Units.inchesToMeters(40.5);
         public static final DCMotor EXTENSION_MOTORS = DCMotor.getKrakenX60(3);
 
+        public static final double WRIST_P_COEFFICIENT = 2 * Math.PI / WRIST_GEAR_RATIO;
         public static final double WRIST_MASS_KG = Units.lbsToKilograms(5);
         public static final double WRIST_LENGTH = Units.inchesToMeters(6);
         public static final double WRIST_STARTING_ANGLE = Units.degreesToRadians(125);

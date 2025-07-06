@@ -42,13 +42,14 @@ public class Arm extends SubsystemBase {
                     Units.degreesToRadians(tunableWrist.get()));
         }
 
-        io.setPivotSetpoint(getPivotMotorRots(setpoint.getPivotRads()));
-        io.setExtensionSetpoint(getExtensionMotorRots(setpoint.getExtensionMeters()));
-        io.setWristSetpoint(getWristMotorRots(setpoint.getWristRads()));
+        io.setPivotSetpoint(setpoint.getPivotRads() / ArmConstants.PIVOT_P_COEFFICIENT);
+        io.setExtensionSetpoint(setpoint.getExtensionMeters() / ArmConstants.EXTENSION_P_COEFFICIENT);
+        io.setWristSetpoint(setpoint.getWristRads() / ArmConstants.WRIST_P_COEFFICIENT);
 
-        Logger.recordOutput("Arm/Pivot Setpoint Rots", getPivotMotorRots(setpoint.getPivotRads()));
-        Logger.recordOutput("Arm/Extension Setpoint Rots", getExtensionMotorRots(setpoint.getExtensionMeters()));
-        Logger.recordOutput("Arm/Wrist Setpoint Rots", getWristMotorRots(setpoint.getWristRads()));
+        Logger.recordOutput("Arm/Pivot Setpoint Rots", setpoint.getPivotRads() / ArmConstants.PIVOT_P_COEFFICIENT);
+        Logger.recordOutput(
+                "Arm/Extension Setpoint Rots", setpoint.getExtensionMeters() / ArmConstants.EXTENSION_P_COEFFICIENT);
+        Logger.recordOutput("Arm/Wrist Setpoint Rots", setpoint.getWristRads() / ArmConstants.WRIST_P_COEFFICIENT);
         Logger.recordOutput("Arm/Component Setpoints", state.position.getComponentTransforms());
     }
 
@@ -62,34 +63,20 @@ public class Arm extends SubsystemBase {
 
     @AutoLogOutput
     public double getPivotAngleRads() {
-        return Units.rotationsToRadians(inputs.pivotData.position()) / ArmConstants.PIVOT_GEAR_RATIO;
+        return inputs.pivotData.position() * ArmConstants.PIVOT_P_COEFFICIENT;
     }
 
     @AutoLogOutput
     public double getExtensionLengthMeters() {
-        return (Units.rotationsToRadians(inputs.extensionData.position()) / ArmConstants.EXTENSION_GEAR_RATIO)
-                * ArmConstants.EXTENSION_DRUM_RADIUS;
+        return inputs.extensionData.position() * ArmConstants.EXTENSION_P_COEFFICIENT;
     }
 
     @AutoLogOutput
     public double getWristAngleRads() {
-        return Units.rotationsToRadians(inputs.wristData.position()) / ArmConstants.WRIST_GEAR_RATIO;
+        return inputs.wristData.position() * ArmConstants.WRIST_P_COEFFICIENT;
     }
 
     public ArmPosition getArmPosition() {
         return new ArmPosition(getPivotAngleRads(), getExtensionLengthMeters(), getWristAngleRads());
-    }
-
-    public static double getPivotMotorRots(double pivotAngleRads) {
-        return Units.radiansToRotations(pivotAngleRads) * ArmConstants.PIVOT_GEAR_RATIO;
-    }
-
-    public static double getExtensionMotorRots(double extensionLengthMeters) {
-        return Units.radiansToRotations(extensionLengthMeters / ArmConstants.EXTENSION_DRUM_RADIUS)
-                * ArmConstants.EXTENSION_GEAR_RATIO;
-    }
-
-    public static double getWristMotorRots(double wristAngleRads) {
-        return Units.radiansToRotations(wristAngleRads) * ArmConstants.WRIST_GEAR_RATIO;
     }
 }

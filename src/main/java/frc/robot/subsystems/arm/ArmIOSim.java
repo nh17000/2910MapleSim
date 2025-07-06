@@ -1,12 +1,12 @@
 package frc.robot.subsystems.arm;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import edu.wpi.first.wpilibj.simulation.TiltedElevatorSim;
 import edu.wpi.first.wpilibj.simulation.VariableLengthArmSim;
 import frc.robot.Constants;
 import frc.robot.Constants.ArmConstants;
+import org.littletonrobotics.junction.AutoLogOutput;
 
 public class ArmIOSim extends ArmIOTalonFX {
     private final TalonFXSimState pivotSimState;
@@ -64,22 +64,17 @@ public class ArmIOSim extends ArmIOTalonFX {
         variableLengthArmSim.setInputVoltage(pivotSimState.getMotorVoltage());
         variableLengthArmSim.update(Constants.LOOP_PERIOD);
 
-        pivotSimState.setRawRotorPosition(
-                Units.radiansToRotations(variableLengthArmSim.getAngleRads() * ArmConstants.PIVOT_GEAR_RATIO));
-        pivotSimState.setRotorVelocity(
-                Units.radiansToRotations(variableLengthArmSim.getVelocityRadPerSec() * ArmConstants.PIVOT_GEAR_RATIO));
+        pivotSimState.setRawRotorPosition(variableLengthArmSim.getAngleRads() / ArmConstants.PIVOT_P_COEFFICIENT);
+        pivotSimState.setRotorVelocity(variableLengthArmSim.getVelocityRadPerSec() / ArmConstants.PIVOT_P_COEFFICIENT);
 
         // extension
         tiltedElevatorSim.setInput(extensionSimState.getMotorVoltage());
         tiltedElevatorSim.update(Constants.LOOP_PERIOD);
 
         extensionSimState.setRawRotorPosition(
-                Units.radiansToRotations(tiltedElevatorSim.getPositionMeters() / ArmConstants.EXTENSION_DRUM_RADIUS)
-                        * ArmConstants.EXTENSION_GEAR_RATIO);
-
-        extensionSimState.setRotorVelocity(Units.radiansToRotations(
-                        tiltedElevatorSim.getVelocityMetersPerSecond() / ArmConstants.EXTENSION_DRUM_RADIUS)
-                * ArmConstants.EXTENSION_GEAR_RATIO);
+                tiltedElevatorSim.getPositionMeters() / ArmConstants.EXTENSION_P_COEFFICIENT);
+        extensionSimState.setRotorVelocity(
+                tiltedElevatorSim.getVelocityMetersPerSecond() / ArmConstants.EXTENSION_P_COEFFICIENT);
 
         // pivot + extension
         variableLengthArmSim.setCGRadius(
@@ -92,12 +87,11 @@ public class ArmIOSim extends ArmIOTalonFX {
         wristSim.setInputVoltage(wristSimState.getMotorVoltage());
         wristSim.update(Constants.LOOP_PERIOD);
 
-        wristSimState.setRawRotorPosition(
-                Units.radiansToRotations(wristSim.getAngleRads() * ArmConstants.WRIST_GEAR_RATIO));
-        wristSimState.setRotorVelocity(
-                Units.radiansToRotations(wristSim.getVelocityRadPerSec() * ArmConstants.WRIST_GEAR_RATIO));
+        wristSimState.setRawRotorPosition(wristSim.getAngleRads() / ArmConstants.WRIST_P_COEFFICIENT);
+        wristSimState.setRotorVelocity(wristSim.getVelocityRadPerSec() / ArmConstants.WRIST_P_COEFFICIENT);
     }
 
+    @AutoLogOutput(key = "Arm/Estimated MOI")
     private double calcPivotMOI(double extensionLength) {
         double m = ArmConstants.ARM_MASS_KG;
         double r = ArmConstants.ARM_SHOULDER_TO_WRIST_LENGTH + extensionLength;
