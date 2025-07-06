@@ -35,7 +35,6 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     private boolean horizontal = false;
 
     private Timer intakingTimer = new Timer();
-    private Timer droppingTimer = new Timer();
 
     private Pose3d intookGamePiecePrevPose = Pose3d.kZero;
 
@@ -321,12 +320,6 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     private void dropFromCoralStation() {
         if (hasCoral) return;
 
-        if (droppingTimer.get() > EndEffectorConstants.DROP_COOLDOWN) {
-            droppingTimer.stop();
-            droppingTimer.reset();
-        } else if (droppingTimer.get() > 0) {
-            return;
-        }
         if (SimulatedArena.getInstance().gamePiecesOnField().size() > 30) return;
 
         Pose2d eePose = getHeldCoralPose().toPose2d();
@@ -337,7 +330,5 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         } else {
             CoralStationSim.drop(nearestCS, true);
         }
-
-        droppingTimer.restart();
     }
 }

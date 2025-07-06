@@ -6,17 +6,23 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.Timer;
+import frc.robot.Constants.EndEffectorConstants;
 import frc.robot.Constants.FieldConstants;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.gamepieces.GamePieceProjectile;
 import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoralOnFly;
 
 public class CoralStationSim {
+    public static double lastDropTime = 0;
+
     public static Pose2d getNearestStation(Pose2d curPose) {
         return curPose.nearest(FieldConstants.CORAL_STATIONS);
     }
 
     public static void drop(Pose2d stationPose, boolean addRandomness) {
+        if (!canDrop()) return;
+
         GamePieceProjectile gamePiece;
 
         if (addRandomness) {
@@ -40,5 +46,10 @@ public class CoralStationSim {
         }
 
         SimulatedArena.getInstance().addGamePieceProjectile(gamePiece);
+        lastDropTime = Timer.getFPGATimestamp();
+    }
+
+    public static boolean canDrop() {
+        return Timer.getFPGATimestamp() - lastDropTime > EndEffectorConstants.DROP_COOLDOWN;
     }
 }

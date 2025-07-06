@@ -68,14 +68,17 @@ public final class Constants {
             L2_BACKWARDS(107, 0, 124),
             CORAL_STATION(67, 5.6, -31),
             NET(90, 40.5, -20),
-            // values obtained from heuristic estimation in sim
-            GROUND_INTAKE(0, 0, 0),
+            // values obtained from official code release or estimation in sim
+            CORAL_GROUND_INTAKE(0, 0, 0),
+            ALGAE_GROUND_INTAKE(32, 0, -85),
             LOW_ALGAE(45, 3, -15),
             LOW_ALGAE_BACKWARDS(107, 0, 80),
             HIGH_ALGAE(63, 14, -30),
             HIGH_ALGAE_BACKWARDS(100, 16, 80),
-            LOLLIPOP(0, 6, 42.5), // or procesor
-            TUNABLE(0, 0, 125); // adjustable setpoints
+            PROCESSOR(0, 0, 42.5),
+            HOLD_CORAL(60, 0, 80),
+            HOLD_ALGAE(90, 0, -20),
+            TUNABLE(0, 0, 125); // adjustable
 
             public final ArmPosition position;
 
@@ -109,11 +112,19 @@ public final class Constants {
                         case 2:
                             return isForwards ? ArmState.LOW_ALGAE : ArmState.LOW_ALGAE_BACKWARDS;
                         case 1:
-                            return ArmState.LOLLIPOP;
+                            return ArmState.PROCESSOR;
                         default:
                             return ArmState.STOWED;
                     }
                 }
+            }
+
+            public static ArmState groundIntake(boolean isCoral) {
+                return isCoral ? ArmState.CORAL_GROUND_INTAKE : ArmState.ALGAE_GROUND_INTAKE;
+            }
+
+            public static ArmState hold(boolean isCoral) {
+                return isCoral ? ArmState.HOLD_CORAL : ArmState.HOLD_ALGAE;
             }
         }
 
@@ -221,7 +232,7 @@ public final class Constants {
         public static final double WRIST_MASS_KG = Units.lbsToKilograms(5);
         public static final double WRIST_LENGTH = Units.inchesToMeters(6);
         public static final double WRIST_STARTING_ANGLE = Units.degreesToRadians(125);
-        public static final double WRIST_MIN_ANGLE = Units.degreesToRadians(-35);
+        public static final double WRIST_MIN_ANGLE = Units.degreesToRadians(-90);
         public static final double WRIST_MAX_ANGLE = Units.degreesToRadians(150);
         public static final DCMotor WRIST_MOTOR = PhoenixUtil.getKrakenX44(1);
     }
@@ -392,6 +403,11 @@ public final class Constants {
         public static final double BARGE_WIDTH = Units.inchesToMeters(40) / 2.0;
         public static final double BARGE_HEIGHT = Units.inchesToMeters(74 + 8);
         public static final double BARGE_HEIGHT_TOLERANCE = Units.inchesToMeters(12);
+
+        public static final Pose2d BLUE_PROCESSOR =
+                VisionConstants.aprilTagLayout.getTagPose(16).get().toPose2d();
+        public static final Pose2d RED_PROCESSOR =
+                VisionConstants.aprilTagLayout.getTagPose(3).get().toPose2d();
     }
 
     public static final class VisualizerConstants {

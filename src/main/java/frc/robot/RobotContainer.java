@@ -20,12 +20,15 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ArmConstants.ArmState;
 import frc.robot.commands.AutoAlign;
@@ -199,8 +202,8 @@ public class RobotContainer {
         controller
                 .leftBumper()
                 .and(() -> !endEffector.hasAlgae() && !endEffector.hasCoral())
-                .onTrue(arm.applyState(ArmState.GROUND_INTAKE))
-                .onFalse(arm.applyState(ArmState.STOWED));
+                .onTrue(arm.followStateSupplier(() -> ArmState.groundIntake(endEffector.isCoral())))
+                .onFalse(arm.followStateSupplier(() -> ArmState.hold(endEffector.isCoral())));
         controller.rightBumper().whileTrue(new RunCommand(() -> endEffector.outtake(align.isForwards()), endEffector));
 
         // --- Operator Controls ---
@@ -228,6 +231,20 @@ public class RobotContainer {
 
         // new Trigger(() -> align.isAlignedDebounced() && endEffector.hasCoral())
         //         .onTrue(new InstantCommand(() -> endEffector.outtake()));
+
+        if (Constants.currentMode == Constants.Mode.SIM) {
+            new Trigger(DriverStation::isAutonomousEnabled)
+                    .onTrue(new WaitCommand(15.3)
+                            .andThen(new InstantCommand(() -> DriverStationSim.setEnabled(false)))
+                            .andThen(new WaitCommand(3).andThen(new InstantCommand(() -> {
+                                DriverStationSim.setAutonomous(false);
+                                DriverStationSim.setEnabled(true);
+                            })))
+                            .ignoringDisable(true));
+            new Trigger(DriverStation::isTeleopEnabled)
+                    .whileTrue(new WaitCommand(135.3)
+                            .andThen(new InstantCommand(() -> DriverStationSim.setEnabled(false))));
+        }
     }
 
     /**
