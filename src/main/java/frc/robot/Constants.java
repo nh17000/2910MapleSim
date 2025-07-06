@@ -313,7 +313,7 @@ public final class Constants {
         public static final Translation2d LEFT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, -BRANCH_SPACING);
         public static final Translation2d RIGHT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, BRANCH_SPACING);
         public static final Translation2d MID_OFFSET = new Translation2d(REEF_ALIGN_TZ, 0.0);
-        public static final Translation2d STATION_OFFSET = new Translation2d(REEF_ALIGN_TZ, 0.0);
+        public static final Translation2d STATION_OFFSET = new Translation2d(Units.inchesToMeters(18), 0.0);
 
         public static final double DRIVE_kP = 5.0;
         public static final double DRIVE_kI = 0.0;

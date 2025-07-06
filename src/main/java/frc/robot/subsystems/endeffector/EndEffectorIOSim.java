@@ -217,10 +217,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         Translation3d currentVec = intakePose.getTranslation().minus(gamePiecePose.getTranslation());
         double currentDist = currentVec.getNorm();
 
-        // Project the game piece's position 0.1 seconds into the future
-        double dt = 0.1; // seconds
-        Translation3d futurePosition = gamePiecePose.getTranslation().plus(velocity.times(dt));
-
+        Translation3d futurePosition = gamePiecePose.getTranslation().plus(velocity.times(0.001));
         double futureDist = intakePose.getTranslation().minus(futurePosition).getNorm();
 
         return futureDist < currentDist;
