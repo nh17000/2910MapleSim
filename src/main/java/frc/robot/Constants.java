@@ -13,6 +13,7 @@
 
 package frc.robot;
 
+import com.ctre.phoenix6.configs.CANrangeConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
@@ -122,8 +123,12 @@ public final class Constants {
                 return isCoral ? ArmState.CORAL_GROUND_INTAKE : ArmState.ALGAE_GROUND_INTAKE;
             }
 
-            public static ArmState hold(boolean isCoral) {
-                return isCoral ? ArmState.HOLD_CORAL : ArmState.HOLD_ALGAE;
+            public static ArmState hold(boolean isCoral, boolean hasGamePiece) {
+                if (hasGamePiece) {
+                    return isCoral ? ArmState.HOLD_CORAL : ArmState.HOLD_ALGAE;
+                } else {
+                    return ArmState.STOWED;
+                }
             }
         }
 
@@ -242,13 +247,13 @@ public final class Constants {
 
     public static final class EndEffectorConstants {
         public enum EEState {
-            VERTICAL_CORAL_INTAKE(-0.3, 0.0),
-            VERTICAL_CORAL_OUTTAKE_FWD(-0.5, 0.0),
-            VERTICAL_CORAL_OUTTAKE_BWD(0.5, 0.0),
-            HORIZONTAL_CORAL_INTAKE(-0.3, 0.3),
-            HORIZONTAL_CORAL_OUTTAKE(0.5, 0.5),
-            ALGAE_INTAKE(0.0, 0.7),
-            ALGAE_OUTTAKE(0.0, -1.0),
+            VERTICAL_CORAL_INTAKE(-4, 0.0),
+            VERTICAL_CORAL_OUTTAKE_FWD(-12, 0.0),
+            VERTICAL_CORAL_OUTTAKE_BWD(12, 0.0),
+            HORIZONTAL_CORAL_INTAKE(-4, 4),
+            HORIZONTAL_CORAL_OUTTAKE(2, 2),
+            ALGAE_INTAKE(0.0, 8),
+            ALGAE_OUTTAKE(0.0, -12),
             OFF(0.0, 0.0);
 
             public final double leftVolts;
@@ -290,11 +295,24 @@ public final class Constants {
             return config;
         }
 
+        public static final CANrangeConfiguration getCANRangeConfigs() {
+            CANrangeConfiguration config = new CANrangeConfiguration();
+
+            config.ProximityParams.ProximityHysteresis = 0.01;
+            config.ProximityParams.ProximityThreshold = 0.07;
+            config.ProximityParams.MinSignalStrengthForValidMeasurement = 8000;
+
+            return config;
+        }
+
         public static final int LEFT_ID = 41;
         public static final int RIGHT_ID = 42;
         public static final int TOP_ID = 43;
 
-        public static final int CAN_RANGE_ID = 44;
+        public static final int FRONT_CAN_RANGE_ID = 44;
+        public static final int BACK_CAN_RANGE_ID = 45;
+        public static final int FRONT_LEFT_CAN_RANGE_ID = 46;
+        public static final int FRONT_RIGHT_CAN_RANGE_ID = 47;
 
         public static final double TRANSLATIONAL_TOLERANCE = Units.inchesToMeters(16);
 

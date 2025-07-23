@@ -24,7 +24,12 @@ public class PearadoxTalonFX extends TalonFX {
         applyConfig(config);
 
         telemetrySignals = new BaseStatusSignal[] {
-            getPosition(), getVelocity(), getMotorVoltage(), getSupplyCurrent(), getStatorCurrent(), getDeviceTemp()
+            getPosition(false),
+            getVelocity(false),
+            getMotorVoltage(false),
+            getSupplyCurrent(false),
+            getStatorCurrent(false),
+            getDeviceTemp(false)
         };
 
         BaseStatusSignal.setUpdateFrequencyForAll(Constants.LOOP_FREQUENCY, telemetrySignals);

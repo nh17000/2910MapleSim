@@ -34,9 +34,9 @@ public class EndEffector extends SubsystemBase {
         io.updateInputs(inputs);
         Logger.processInputs("EndEffector", inputs);
 
-        io.setLeftSpeed(state.leftVolts);
-        io.setRightSpeed(state.rightVolts);
-        io.setTopSpeed(state.topVolts);
+        io.setLeftVolts(state.leftVolts);
+        io.setRightVolts(state.rightVolts);
+        io.setTopVolts(state.topVolts);
     }
 
     public void intake() {
@@ -73,5 +73,9 @@ public class EndEffector extends SubsystemBase {
 
     public boolean hasAlgae() {
         return inputs.hasAlgae;
+    }
+
+    public boolean hasGamePiece() {
+        return hasCoral() || hasAlgae();
     }
 }

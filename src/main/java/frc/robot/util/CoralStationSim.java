@@ -6,6 +6,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.Constants.EndEffectorConstants;
 import frc.robot.Constants.FieldConstants;
@@ -50,6 +51,7 @@ public class CoralStationSim {
     }
 
     public static boolean canDrop() {
-        return Timer.getFPGATimestamp() - lastDropTime > EndEffectorConstants.DROP_COOLDOWN;
+        return DriverStation.isEnabled()
+                && Timer.getFPGATimestamp() - lastDropTime > EndEffectorConstants.DROP_COOLDOWN;
     }
 }

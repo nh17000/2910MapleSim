@@ -201,9 +201,10 @@ public class RobotContainer {
 
         controller
                 .leftBumper()
-                .and(() -> !endEffector.hasAlgae() && !endEffector.hasCoral())
+                .and(() -> !endEffector.hasGamePiece())
                 .onTrue(arm.followStateSupplier(() -> ArmState.groundIntake(endEffector.isCoral())))
-                .onFalse(arm.followStateSupplier(() -> ArmState.hold(endEffector.isCoral())));
+                .onFalse(arm.followStateSupplier(
+                        () -> ArmState.hold(endEffector.isCoral(), endEffector.hasGamePiece())));
         controller.rightBumper().whileTrue(new RunCommand(() -> endEffector.outtake(align.isForwards()), endEffector));
 
         // --- Operator Controls ---
