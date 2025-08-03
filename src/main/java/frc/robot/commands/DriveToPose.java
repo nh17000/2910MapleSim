@@ -68,8 +68,17 @@ public class DriveToPose extends Command {
     // Called when the command is initially scheduled.
     @Override
     public void initialize() {
-        translationController.reset(0);
-        rotationController.reset(robotSupplier.get().getRotation().getRadians());
+        Pose2d targetPose = targetSupplier.get();
+        Pose2d currentPose = robotSupplier.get();
+        ChassisSpeeds currentSpeeds = drive.getChassisSpeeds();
+
+        Translation2d translationError = targetPose.minus(currentPose).getTranslation();
+        Rotation2d directionToTarget = translationError.getAngle();
+        double velocityTowardsTarget = currentSpeeds.vxMetersPerSecond * directionToTarget.getCos()
+                + currentSpeeds.vyMetersPerSecond * directionToTarget.getSin();
+
+        translationController.reset(translationError.getNorm(), -velocityTowardsTarget);
+        rotationController.reset(robotSupplier.get().getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond);
     }
 
     // Called every time the scheduler runs while the command is scheduled.

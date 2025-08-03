@@ -270,9 +270,10 @@ public final class Constants {
         public static final TalonFXConfiguration getLRConfigs() {
             TalonFXConfiguration config = new TalonFXConfiguration();
 
-            config.CurrentLimits.SupplyCurrentLimitEnable = true;
+            // disable roller current limits in sim
+            config.CurrentLimits.SupplyCurrentLimitEnable = currentMode != Mode.SIM;
             config.CurrentLimits.SupplyCurrentLimit = 30;
-            config.CurrentLimits.StatorCurrentLimitEnable = true;
+            config.CurrentLimits.StatorCurrentLimitEnable = currentMode != Mode.SIM;
             config.CurrentLimits.StatorCurrentLimit = 30;
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
@@ -319,7 +320,7 @@ public final class Constants {
         public static final double INTAKING_TIME = 0.5;
         public static final double DROP_COOLDOWN = 2.0;
 
-        public static final double LR_GEAR_RATIO = 1.0 / ((40.0 / 12.0) * (40.0 / 14.0));
+        public static final double LR_GEAR_RATIO = (40. / 12.) * (40. / 14.);
         public static final double LR_MASS = Units.lbsToKilograms(0.5);
         public static final double LR_RADIUS = Units.inchesToMeters(2);
         public static final double LR_MOI = 1.0 / 2.0 * LR_MASS * LR_RADIUS * LR_RADIUS;
@@ -329,24 +330,24 @@ public final class Constants {
 
     public static final class AlignConstants {
         public static final double BRANCH_SPACING = Units.inchesToMeters(12.97 / 2.0);
-        public static final double REEF_ALIGN_TZ = Units.inchesToMeters(22); // 18
+        public static final double REEF_ALIGN_TZ = Units.inchesToMeters(22);
 
         public static final Translation2d LEFT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, -BRANCH_SPACING);
         public static final Translation2d RIGHT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, BRANCH_SPACING);
         public static final Translation2d MID_OFFSET = new Translation2d(REEF_ALIGN_TZ, 0.0);
         public static final Translation2d STATION_OFFSET = new Translation2d(Units.inchesToMeters(18), 0.0);
 
-        public static final double DRIVE_kP = 5.0;
+        public static final double DRIVE_kP = 5.0; // m/s per m error
         public static final double DRIVE_kI = 0.0;
         public static final double DRIVE_kD = 0.0;
-        public static final double MAX_DRIVE_VELOCITY = 4.73;
-        public static final double MAX_DRIVE_ACCELERATION = 20;
+        public static final double MAX_DRIVE_VELOCITY = 3.0; // m/s
+        public static final double MAX_DRIVE_ACCELERATION = 10; // m/s^2
 
-        public static final double ROT_kP = 5.0;
+        public static final double ROT_kP = 5.0; // rad/s per rad error
         public static final double ROT_kI = 0.0;
         public static final double ROT_kD = 0.0;
-        public static final double MAX_ROT_VELOCITY = 8;
-        public static final double MAX_ROT_ACCELERATION = 20;
+        public static final double MAX_ROT_VELOCITY = 8; // rad/s
+        public static final double MAX_ROT_ACCELERATION = 20; // rad/s^2
 
         public static final double ALIGN_ROT_TOLERANCE = Units.degreesToRadians(3);
         public static final double ALIGN_TRANSLATION_TOLERANCE = Units.inchesToMeters(2);

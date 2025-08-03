@@ -2,6 +2,7 @@ package frc.robot.subsystems.endeffector;
 
 import static edu.wpi.first.units.Units.*;
 
+import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -18,7 +19,6 @@ import frc.robot.Constants.EndEffectorConstants;
 import frc.robot.Constants.VisualizerConstants;
 import frc.robot.util.AlgaeHandler;
 import frc.robot.util.CoralStationSim;
-import frc.robot.util.PearadoxTalonFX.MotorData;
 import java.util.function.Supplier;
 import org.ironmaple.simulation.IntakeSimulation;
 import org.ironmaple.simulation.SimulatedArena;
@@ -28,7 +28,7 @@ import org.ironmaple.simulation.seasonspecific.reefscape2025.ReefscapeCoralOnFly
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
-public class EndEffectorIOSim implements EndEffectorIO {
+public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     private boolean hasCoral = true;
     private boolean hasAlgae = false;
 
@@ -40,30 +40,24 @@ public class EndEffectorIOSim implements EndEffectorIO {
 
     private final FlywheelSim rollerSim = new FlywheelSim(
             LinearSystemId.createFlywheelSystem(
-                    EndEffectorConstants.LR_MOTOR,
-                    EndEffectorConstants.LR_MOI,
-                    1.0 / EndEffectorConstants.LR_GEAR_RATIO),
+                    EndEffectorConstants.LR_MOTOR, EndEffectorConstants.LR_MOI, EndEffectorConstants.LR_GEAR_RATIO),
             EndEffectorConstants.LR_MOTOR);
+
+    private static final double MIN_POS = -0.1;
+    private static final double MAX_POS = 0.35;
+    private static final double INTAKE_POS = 0.25;
+    private static final double POS_TOLERANCE = 0.02;
 
     @AutoLogOutput(key = "EndEffector/Roller Theta")
     private double rollerAngularPosition = 0.0;
 
     @AutoLogOutput(key = "EndEffector/Coral Pos")
-    private double coralPos = 0.0;
-
-    private static final double MAX_POS = 0.15;
-    private static final double INTAKE_POS = 0.1;
-    private static final double MIN_POS = -0.05;
-    private static final double POS_TOLERANCE = 0.01;
-    private static final double POS_COEFFICIENT = 1;
+    private double coralPos = INTAKE_POS;
 
     private final IntakeSimulation coralGroundIntakeSim;
     private final IntakeSimulation algaeGroundIntakeSim;
 
-    // private final TalonFXSimState leftSimState;
-    private double leftVolts = 0.0;
-    private double rightVolts = 0.0;
-    private double topVolts = 0.0;
+    private final TalonFXSimState leftSimState;
 
     private Supplier<Pose2d> poseSupplier;
     private Supplier<ChassisSpeeds> chassisSpeedsSupplier;
@@ -81,64 +75,40 @@ public class EndEffectorIOSim implements EndEffectorIO {
         this.chassisSpeedsSupplier = driveSimulation::getDriveTrainSimulatedChassisSpeedsFieldRelative;
         this.wristTransformSupplier = wristTransformSupplier;
 
-        // leftSimState = left.getSimState();
-    }
-
-    @Override
-    public void setLeftVolts(double volts) {
-        leftVolts = volts;
-    }
-
-    @Override
-    public void setRightVolts(double volts) {
-        rightVolts = volts;
-    }
-
-    @Override
-    public void setTopVolts(double volts) {
-        topVolts = volts;
+        leftSimState = left.getSimState();
     }
 
     @Override
     public void updateInputs(EndEffectorIOInputs inputs) {
-        // super.updateInputs(inputs);
-        inputs.leftData = new MotorData(
-                Units.radiansToRotations(rollerAngularPosition) * EndEffectorConstants.LR_GEAR_RATIO,
-                Units.radiansToRotations(rollerSim.getAngularVelocityRadPerSec()) * EndEffectorConstants.LR_GEAR_RATIO,
-                rollerSim.getInputVoltage(),
-                rollerSim.getCurrentDrawAmps(),
-                EndEffectorConstants.LR_MOTOR.getCurrent(rollerSim.getTorqueNewtonMeters()),
-                29.10,
-                true);
+        super.updateInputs(inputs);
 
         updateRollerSim(Constants.LOOP_PERIOD);
-        updateGamePieces(leftVolts, topVolts);
+        updateGamePieces(inputs.leftData.appliedVolts(), inputs.topData.appliedVolts());
 
-        inputs.hasCoral = hasCoral; // && MathUtil.isNear(0.0, coralPos, 0.15);
+        inputs.hasCoral = hasCoral;
         inputs.hasAlgae = hasAlgae;
     }
 
     private void updateRollerSim(double dtSeconds) {
-        // leftSimState.setSupplyVoltage(Constants.NOMINAL_VOLTAGE);
-        rollerSim.setInputVoltage(leftVolts);
+        leftSimState.setSupplyVoltage(Constants.NOMINAL_VOLTAGE);
+        rollerSim.setInputVoltage(leftSimState.getMotorVoltage());
         rollerSim.update(dtSeconds);
 
-        double deltaTheta = dtSeconds * Units.radiansToRotations(rollerSim.getAngularVelocityRadPerSec());
+        double deltaTheta = dtSeconds * rollerSim.getAngularVelocityRadPerSec();
         rollerAngularPosition += deltaTheta;
         if (hasCoral) {
             coralPos = MathUtil.clamp(
-                    coralPos + EndEffectorConstants.LR_RADIUS * deltaTheta * POS_COEFFICIENT,
+                    coralPos + EndEffectorConstants.LR_RADIUS * deltaTheta,
                     MIN_POS - POS_TOLERANCE,
                     MAX_POS + POS_TOLERANCE);
         } else {
             coralPos = 0.0;
         }
 
-        // leftSimState.setRawRotorPosition(
-        //         Units.radiansToRotations(rollerAngularPosition) * EndEffectorConstants.LR_GEAR_RATIO);
-        // leftSimState.setRotorVelocity(
-        //         Units.radiansToRotations(rollerSim.getAngularVelocityRadPerSec()) *
-        // EndEffectorConstants.LR_GEAR_RATIO);
+        leftSimState.setRawRotorPosition(
+                Units.radiansToRotations(rollerAngularPosition) * EndEffectorConstants.LR_GEAR_RATIO);
+        leftSimState.setRotorVelocity(
+                Units.radiansToRotations(rollerSim.getAngularVelocityRadPerSec()) * EndEffectorConstants.LR_GEAR_RATIO);
     }
 
     private void updateGamePieces(double leftVolts, double topVolts) {
@@ -305,7 +275,7 @@ public class EndEffectorIOSim implements EndEffectorIO {
 
         Transform3d eeTransform = getHeldCoralTransform();
 
-        double ejectVel = (rollerSim.getAngularVelocityRadPerSec() * EndEffectorConstants.LR_RADIUS) / POS_COEFFICIENT;
+        double ejectVel = rollerSim.getAngularVelocityRadPerSec() * EndEffectorConstants.LR_RADIUS;
         if (horizontal) ejectVel = -Math.abs(ejectVel);
 
         SimulatedArena.getInstance()

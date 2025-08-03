@@ -1,7 +1,5 @@
 package frc.robot.subsystems.endeffector;
 
-import frc.robot.Constants.EndEffectorConstants;
-
 public class EndEffectorIOReal extends EndEffectorIOTalonFX {
     public EndEffectorIOReal() {}
 
@@ -9,7 +7,8 @@ public class EndEffectorIOReal extends EndEffectorIOTalonFX {
     public void updateInputs(EndEffectorIOInputs inputs) {
         super.updateInputs(inputs);
 
-        inputs.hasCoral = frontCANRange.getData().distance() < EndEffectorConstants.TRANSLATIONAL_TOLERANCE;
-        inputs.hasAlgae = frontCANRange.getData().distance() < EndEffectorConstants.TRANSLATIONAL_TOLERANCE;
+        // todo: implement
+        inputs.hasCoral = inputs.frontData.isDetected();
+        inputs.hasAlgae = inputs.topData.statorCurrent() > 30;
     }
 }
