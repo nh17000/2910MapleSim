@@ -30,6 +30,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ArmConstants.ArmState;
+import frc.robot.Constants.EndEffectorConstants.GamePieceMode;
 import frc.robot.commands.AutoAlign;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
@@ -44,6 +45,8 @@ import frc.robot.subsystems.endeffector.EndEffectorIOReal;
 import frc.robot.subsystems.endeffector.EndEffectorIOSim;
 import frc.robot.subsystems.vision.*;
 import frc.robot.util.AlgaeHandler;
+import java.util.EnumSet;
+import java.util.Set;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
@@ -184,8 +187,8 @@ public class RobotContainer {
         // --- Driver Controls ---
         controller
                 .povUp()
-                .whileTrue(
-                        new ConditionalCommand(align.stationAlign(drive), align.netAlign(drive), endEffector::isCoral));
+                .whileTrue(new ConditionalCommand(
+                        align.netAlign(drive), align.stationAlign(drive), endEffector::hasAlgae));
         controller.povLeft().whileTrue(align.reefAlignLeft(drive));
         controller.povDown().whileTrue(align.reefAlignMid(drive));
         controller.povRight().whileTrue(align.reefAlignRight(drive));
@@ -200,11 +203,8 @@ public class RobotContainer {
 
         controller
                 .leftBumper()
-                .whileTrue(arm.followStateSupplier(() -> ArmState.groundIntake(endEffector.isCoral())))
-                .onFalse(new ConditionalCommand(
-                        arm.followStateSupplier(() -> ArmState.of(1, endEffector.isCoral(), align.isForwards())),
-                        arm.followStateSupplier(() -> ArmState.hold(endEffector.isCoral(), endEffector.hasGamePiece())),
-                        endEffector::isHorizontal));
+                .whileTrue(arm.followStateSupplier(() -> ArmState.groundIntake(endEffector.getMode())))
+                .onFalse(arm.followStateSupplier(() -> ArmState.hold(endEffector.getMode())));
 
         controller
                 .rightBumper()
@@ -219,35 +219,28 @@ public class RobotContainer {
                 .whileTrue(endEffector.outtake(align::isForwards));
 
         // --- Operator Controls ---
-        opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(true)));
-        opController.rightBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(false)));
-
-        opController.start().onTrue(new InstantCommand(() -> endEffector.setHorizontal(true)));
-        opController.back().onTrue(new InstantCommand(() -> endEffector.setHorizontal(false)));
+        opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setMode(GamePieceMode.VERTICAL_CORAL)));
+        opController.rightBumper().onTrue(new InstantCommand(() -> endEffector.setMode(GamePieceMode.ALGAE)));
+        opController.start().onTrue(new InstantCommand(() -> endEffector.setMode(GamePieceMode.HORIZONTAL_CORAL)));
 
         opController.povLeft().onTrue(arm.applyState(ArmState.TUNABLE));
         opController.povRight().onTrue(arm.applyState(ArmState.CORAL_STATION));
+        opController.povUp().onTrue(arm.applyState(ArmState.PROCESSOR));
+        opController.povDown().onTrue(arm.applyState(ArmState.STOWED));
 
-        opController
-                .a()
-                .onTrue(arm.followStateSupplier(() -> ArmState.of(1, endEffector.isCoral(), align.isForwards())));
+        opController.a().onTrue(arm.followStateSupplier(() -> ArmState.hold(endEffector.getMode())));
         opController
                 .x()
-                .onTrue(arm.followStateSupplier(() -> ArmState.of(2, endEffector.isCoral(), align.isForwards())));
+                .onTrue(arm.followStateSupplier(() -> ArmState.of(2, endEffector.getMode(), align.isForwards())));
         opController
                 .b()
-                .onTrue(arm.followStateSupplier(() -> ArmState.of(3, endEffector.isCoral(), align.isForwards())));
+                .onTrue(arm.followStateSupplier(() -> ArmState.of(3, endEffector.getMode(), align.isForwards())));
         opController
                 .y()
-                .onTrue(arm.followStateSupplier(() -> ArmState.of(4, endEffector.isCoral(), align.isForwards())));
+                .onTrue(arm.followStateSupplier(() -> ArmState.of(4, endEffector.getMode(), align.isForwards())));
 
-        opController
-                .a()
-                .or(opController.x())
-                .or(opController.b())
-                .or(opController.y())
-                .and(endEffector::hasCoral)
-                .onTrue(endEffector.index(align::isForwards));
+        new Trigger(() -> endEffector.hasCoral() && shouldIndexCoral(arm.getState()))
+                .whileTrue(endEffector.index(align::isForwards));
 
         if (Constants.currentMode == Constants.Mode.SIM) {
             new Trigger(DriverStation::isAutonomousEnabled)
@@ -300,5 +293,20 @@ public class RobotContainer {
             return alliance.get() == DriverStation.Alliance.Red;
         }
         return false;
+    }
+
+    private static final Set<ArmState> INDEXABLE_STATES = EnumSet.of(
+            ArmState.L1_BASE,
+            ArmState.L1_FRONT,
+            ArmState.L1_TOP,
+            ArmState.L2,
+            ArmState.L3,
+            ArmState.L4,
+            ArmState.L2_BACKWARDS,
+            ArmState.L3_BACKWARDS,
+            ArmState.L4_BACKWARDS);
+
+    public static boolean shouldIndexCoral(ArmState armState) {
+        return INDEXABLE_STATES.contains(armState);
     }
 }

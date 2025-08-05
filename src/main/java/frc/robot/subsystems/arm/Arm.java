@@ -2,8 +2,6 @@ package frc.robot.subsystems.arm;
 
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.ArmConstants;
 import frc.robot.Constants.ArmConstants.ArmState;
@@ -54,11 +52,11 @@ public class Arm extends SubsystemBase {
     }
 
     public Command applyState(ArmState desiredState) {
-        return new InstantCommand(() -> this.state = desiredState, this);
+        return runOnce(() -> this.state = desiredState);
     }
 
     public Command followStateSupplier(Supplier<ArmState> stateSupplier) {
-        return new RunCommand(() -> this.state = stateSupplier.get(), this);
+        return run(() -> this.state = stateSupplier.get());
     }
 
     @AutoLogOutput

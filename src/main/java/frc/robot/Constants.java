@@ -26,6 +26,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
+import frc.robot.Constants.EndEffectorConstants.GamePieceMode;
 import frc.robot.subsystems.arm.ArmPosition;
 import frc.robot.subsystems.vision.VisionConstants;
 import frc.robot.util.PhoenixUtil;
@@ -61,14 +62,17 @@ public final class Constants {
             L4(68, 39.75, 45),
             L3(56, 19, 95),
             L2(38, 9.45, 118),
-            L1(35, 0, -20),
+            L1_FRONT(37, 0, 0),
+            L1_BASE(35, 0, -8),
+            L1_TOP(43, 0, -20),
             L4_BACKWARDS(97, 41.5, 146),
             L3_BACKWARDS(100, 11, 115),
             L2_BACKWARDS(107, 0, 124),
             CORAL_STATION(67, 5.6, -31),
             NET(90, 40.5, -20),
             NET_PREP(90, 35, -20),
-            CORAL_GROUND_INTAKE(0, 0, 0),
+            VERITCAL_CORAL_GROUND_INTAKE(0, 0, -2),
+            HORIZONTAL_CORAL_GROUND_INTAKE(4, 0, -10),
             ALGAE_GROUND_INTAKE(32, 0, -85),
             LOW_ALGAE(45, 3, -15),
             LOW_ALGAE_BACKWARDS(107, 0, 80),
@@ -88,46 +92,44 @@ public final class Constants {
                         Units.degreesToRadians(wristDegrees));
             }
 
-            public static ArmState of(int level, boolean isCoral, boolean isForwards) {
-                if (isCoral) {
-                    switch (level) {
-                        case 4:
-                            return isForwards ? ArmState.L4 : ArmState.L4_BACKWARDS;
-                        case 3:
-                            return isForwards ? ArmState.L3 : ArmState.L3_BACKWARDS;
-                        case 2:
-                            return isForwards ? ArmState.L2 : ArmState.L2_BACKWARDS;
-                        case 1:
-                            return ArmState.L1;
-                        default:
-                            return ArmState.CORAL_STATION;
-                    }
-                } else {
-                    switch (level) {
-                        case 4:
-                            return ArmState.NET_PREP;
-                        case 3:
-                            return isForwards ? ArmState.HIGH_ALGAE : ArmState.HIGH_ALGAE_BACKWARDS;
-                        case 2:
-                            return isForwards ? ArmState.LOW_ALGAE : ArmState.LOW_ALGAE_BACKWARDS;
-                        case 1:
-                            return ArmState.PROCESSOR;
-                        default:
-                            return ArmState.STOWED;
-                    }
-                }
+            public static ArmState of(int level, GamePieceMode mode, boolean isForwards) {
+                return switch (mode) {
+                    case VERTICAL_CORAL -> switch (level) {
+                        case 4 -> isForwards ? ArmState.L4 : ArmState.L4_BACKWARDS;
+                        case 3 -> isForwards ? ArmState.L3 : ArmState.L3_BACKWARDS;
+                        case 2 -> isForwards ? ArmState.L2 : ArmState.L2_BACKWARDS;
+                        default -> ArmState.STOWED;
+                    };
+                    case HORIZONTAL_CORAL -> switch (level) {
+                        case 4 -> ArmState.L1_TOP;
+                        case 3 -> ArmState.L1_FRONT;
+                        case 2 -> ArmState.L1_BASE;
+                        default -> ArmState.STOWED;
+                    };
+                    case ALGAE -> switch (level) {
+                        case 4 -> ArmState.NET_PREP;
+                        case 3 -> isForwards ? ArmState.HIGH_ALGAE : ArmState.HIGH_ALGAE_BACKWARDS;
+                        case 2 -> isForwards ? ArmState.LOW_ALGAE : ArmState.LOW_ALGAE_BACKWARDS;
+                        case 1 -> ArmState.PROCESSOR;
+                        default -> ArmState.STOWED;
+                    };
+                };
             }
 
-            public static ArmState groundIntake(boolean isCoral) {
-                return isCoral ? ArmState.CORAL_GROUND_INTAKE : ArmState.ALGAE_GROUND_INTAKE;
+            public static ArmState groundIntake(GamePieceMode mode) {
+                return switch (mode) {
+                    case VERTICAL_CORAL -> ArmState.VERITCAL_CORAL_GROUND_INTAKE;
+                    case HORIZONTAL_CORAL -> ArmState.HORIZONTAL_CORAL_GROUND_INTAKE;
+                    case ALGAE -> ArmState.ALGAE_GROUND_INTAKE;
+                };
             }
 
-            public static ArmState hold(boolean isCoral, boolean hasGamePiece) {
-                if (hasGamePiece) {
-                    return isCoral ? ArmState.HOLD_CORAL : ArmState.HOLD_ALGAE;
-                } else {
-                    return ArmState.STOWED;
-                }
+            public static ArmState hold(GamePieceMode mode) {
+                return switch (mode) {
+                    case VERTICAL_CORAL -> ArmState.HOLD_CORAL;
+                    case HORIZONTAL_CORAL -> ArmState.L1_BASE;
+                    case ALGAE -> ArmState.HOLD_ALGAE;
+                };
             }
         }
 
@@ -267,6 +269,12 @@ public final class Constants {
                 this.rightVolts = -leftVolts;
                 this.topVolts = topVolts;
             }
+        }
+
+        public enum GamePieceMode {
+            HORIZONTAL_CORAL,
+            VERTICAL_CORAL,
+            ALGAE
         }
 
         public static final TalonFXConfiguration getLRConfigs() {
