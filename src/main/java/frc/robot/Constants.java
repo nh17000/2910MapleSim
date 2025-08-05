@@ -255,6 +255,7 @@ public final class Constants {
             ALGAE_OUTTAKE(0, -12),
             INDEXING_FWD(-2, 0),
             INDEXING_BWD(2, 0),
+            INDEXING_HORIZONTAL(0, -1), // todo: left & right
             OFF(0, 0);
 
             public final double leftVolts;

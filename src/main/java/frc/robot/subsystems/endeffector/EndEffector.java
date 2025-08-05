@@ -44,13 +44,9 @@ public class EndEffector extends SubsystemBase {
     public Command intake() {
         return run(() -> {
             if (hasCoral() || hasAlgae()) {
-                state = EEState.OFF;
+                state = isHorizontal ? EEState.INDEXING_HORIZONTAL : EEState.OFF;
             } else if (isCoral) {
-                if (isHorizontal) {
-                    state = EEState.HORIZONTAL_CORAL_INTAKE;
-                } else {
-                    state = EEState.VERTICAL_CORAL_INTAKE;
-                }
+                state = isHorizontal ? EEState.HORIZONTAL_CORAL_INTAKE : EEState.VERTICAL_CORAL_INTAKE;
             } else {
                 state = EEState.ALGAE_INTAKE;
             }
@@ -59,14 +55,18 @@ public class EndEffector extends SubsystemBase {
 
     public Command index(BooleanSupplier isForwardsSupplier) {
         return run(() -> {
-            boolean isForwards = isForwardsSupplier.getAsBoolean();
-
-            if (isForwards && inputs.backData.isDetected()) {
-                state = EEState.INDEXING_BWD;
-            } else if (!isForwards && inputs.frontData.isDetected()) {
-                state = EEState.INDEXING_FWD;
+            if (isHorizontal) {
+                state = EEState.INDEXING_HORIZONTAL;
             } else {
-                state = EEState.OFF;
+                boolean isForwards = isForwardsSupplier.getAsBoolean();
+
+                if (isForwards && inputs.backData.isDetected()) {
+                    state = EEState.INDEXING_BWD;
+                } else if (!isForwards && inputs.frontData.isDetected()) {
+                    state = EEState.INDEXING_FWD;
+                } else {
+                    state = EEState.OFF;
+                }
             }
         });
     }
