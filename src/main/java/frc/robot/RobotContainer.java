@@ -25,7 +25,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -63,13 +62,13 @@ public class RobotContainer {
     private final EndEffector endEffector;
 
     public final RobotVisualizer visualizer;
-    public final AutoAlign align;
+    private final AutoAlign align;
 
     private SwerveDriveSimulation driveSimulation = null;
 
     // Controller
-    public static final CommandXboxController controller = new CommandXboxController(0);
-    public static final CommandXboxController opController = new CommandXboxController(1);
+    private static final CommandXboxController controller = new CommandXboxController(0);
+    private static final CommandXboxController opController = new CommandXboxController(1);
 
     // Dashboard inputs
     private final LoggedDashboardChooser<Command> autoChooser;
@@ -177,7 +176,7 @@ public class RobotContainer {
                 () -> -controller.getRightX(),
                 true));
 
-        endEffector.setDefaultCommand(new RunCommand(() -> endEffector.intake(), endEffector));
+        endEffector.setDefaultCommand(endEffector.intake());
 
         // Controls can be found here
         // https://docs.google.com/spreadsheets/d/1LB6nTpDfxbCZiFzkx_2DcHvuDDgMP4XP9NIPqSqYTP4/
@@ -202,9 +201,22 @@ public class RobotContainer {
         controller
                 .leftBumper()
                 .whileTrue(arm.followStateSupplier(() -> ArmState.groundIntake(endEffector.isCoral())))
-                .onFalse(arm.followStateSupplier(
-                        () -> ArmState.hold(endEffector.isCoral(), endEffector.hasGamePiece())));
-        controller.rightBumper().whileTrue(new RunCommand(() -> endEffector.outtake(align.isForwards()), endEffector));
+                .onFalse(new ConditionalCommand(
+                        arm.followStateSupplier(() -> ArmState.of(1, endEffector.isCoral(), align.isForwards())),
+                        arm.followStateSupplier(() -> ArmState.hold(endEffector.isCoral(), endEffector.hasGamePiece())),
+                        endEffector::isHorizontal));
+
+        controller
+                .rightBumper()
+                .and(() -> arm.getState() == ArmState.NET_PREP)
+                .whileTrue(arm.applyState(ArmState.NET)
+                        .andThen(new WaitCommand(0.3))
+                        .andThen(endEffector.outtake(align::isForwards)));
+
+        controller
+                .rightBumper()
+                .and(() -> arm.getState() != ArmState.NET_PREP)
+                .whileTrue(endEffector.outtake(align::isForwards));
 
         // --- Operator Controls ---
         opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setCoral(true)));
@@ -229,8 +241,13 @@ public class RobotContainer {
                 .y()
                 .onTrue(arm.followStateSupplier(() -> ArmState.of(4, endEffector.isCoral(), align.isForwards())));
 
-        // new Trigger(() -> align.isAlignedDebounced() && endEffector.hasCoral())
-        //         .onTrue(new InstantCommand(() -> endEffector.outtake()));
+        opController
+                .a()
+                .or(opController.x())
+                .or(opController.b())
+                .or(opController.y())
+                .and(endEffector::hasCoral)
+                .onTrue(endEffector.index(align::isForwards));
 
         if (Constants.currentMode == Constants.Mode.SIM) {
             new Trigger(DriverStation::isAutonomousEnabled)

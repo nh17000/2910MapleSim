@@ -46,7 +46,11 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
     private static final double MIN_POS = -0.1;
     private static final double MAX_POS = 0.35;
     private static final double INTAKE_POS = 0.25;
-    private static final double POS_TOLERANCE = 0.02;
+    private static final double POS_TOLERANCE = 0.01;
+
+    private static final double CORAL_LENGTH = Units.inchesToMeters(11.875);
+    private static final double FRONT_CAN_RANGE_POS = 0.175;
+    private static final double BACK_CAN_RANGE_POS = 0.05;
 
     @AutoLogOutput(key = "EndEffector/Roller Theta")
     private double rollerAngularPosition = 0.0;
@@ -84,6 +88,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
         updateRollerSim(Constants.LOOP_PERIOD);
         updateGamePieces(inputs.leftData.appliedVolts(), inputs.topData.appliedVolts());
+        updateCANRangeSims();
 
         inputs.hasCoral = hasCoral;
         inputs.hasAlgae = hasAlgae;
@@ -167,6 +172,17 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
         }
 
         visualizeGamePieces();
+    }
+
+    private void updateCANRangeSims() {
+        boolean isFrontTripped = hasCoral && MathUtil.isNear(FRONT_CAN_RANGE_POS, coralPos, CORAL_LENGTH / 2.0);
+        boolean isBackTripped = hasCoral && MathUtil.isNear(BACK_CAN_RANGE_POS, coralPos, CORAL_LENGTH / 2.0);
+        boolean areSidesTripped = hasCoral && horizontal;
+
+        frontCANRange.getSimState().setDistance(isFrontTripped ? 0.01 : 1);
+        backCANRange.getSimState().setDistance(isBackTripped ? 0.01 : 1);
+        frontLeftCANRange.getSimState().setDistance(areSidesTripped ? 0.01 : 1);
+        frontRightCANRange.getSimState().setDistance(areSidesTripped ? 0.01 : 1);
     }
 
     private void intakeCoralProjectiles() {

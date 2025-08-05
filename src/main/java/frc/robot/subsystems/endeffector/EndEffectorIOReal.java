@@ -8,7 +8,7 @@ public class EndEffectorIOReal extends EndEffectorIOTalonFX {
         super.updateInputs(inputs);
 
         // todo: implement
-        inputs.hasCoral = inputs.frontData.isDetected();
+        inputs.hasCoral = inputs.frontData.isDetected() || inputs.backData.isDetected();
         inputs.hasAlgae = inputs.topData.statorCurrent() > 30;
     }
 }

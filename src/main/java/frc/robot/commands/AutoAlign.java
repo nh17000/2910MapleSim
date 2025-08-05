@@ -13,7 +13,6 @@ import frc.robot.RobotContainer;
 import frc.robot.subsystems.drive.Drive;
 import java.util.function.Supplier;
 import lombok.Getter;
-import lombok.Setter;
 import org.littletonrobotics.junction.AutoLogOutput;
 
 public class AutoAlign {
@@ -25,7 +24,6 @@ public class AutoAlign {
     @AutoLogOutput
     private boolean isForwards = true;
 
-    @Setter
     private Supplier<Pose2d> robotSupplier;
 
     public AutoAlign(Supplier<Pose2d> robotPoseSupplier) {

@@ -57,28 +57,27 @@ public final class Constants {
 
     public static final class ArmConstants {
         public enum ArmState {
-            // values obtained from CAD configurations in onshape
             STOWED(0, 0, 125),
             L4(68, 39.75, 45),
             L3(56, 19, 95),
             L2(38, 9.45, 118),
             L1(35, 0, -20),
-            L4_BACKWARDS(100, 40.5, 149.5),
+            L4_BACKWARDS(97, 41.5, 146),
             L3_BACKWARDS(100, 11, 115),
             L2_BACKWARDS(107, 0, 124),
             CORAL_STATION(67, 5.6, -31),
             NET(90, 40.5, -20),
-            // values obtained from official code release or estimation in sim
+            NET_PREP(90, 35, -20),
             CORAL_GROUND_INTAKE(0, 0, 0),
             ALGAE_GROUND_INTAKE(32, 0, -85),
             LOW_ALGAE(45, 3, -15),
             LOW_ALGAE_BACKWARDS(107, 0, 80),
             HIGH_ALGAE(63, 14, -30),
             HIGH_ALGAE_BACKWARDS(100, 16, 80),
-            PROCESSOR(0, 0, 42.5),
+            PROCESSOR(0, 0, 25),
             HOLD_CORAL(60, 0, 80),
             HOLD_ALGAE(90, 0, -20),
-            TUNABLE(0, 0, 125); // adjustable
+            TUNABLE(0, 0, 125);
 
             public final ArmPosition position;
 
@@ -106,7 +105,7 @@ public final class Constants {
                 } else {
                     switch (level) {
                         case 4:
-                            return ArmState.NET;
+                            return ArmState.NET_PREP;
                         case 3:
                             return isForwards ? ArmState.HIGH_ALGAE : ArmState.HIGH_ALGAE_BACKWARDS;
                         case 2:
@@ -190,17 +189,17 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 30;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = Units.degreesToRadians(2000) / WRIST_P_COEFFICIENT;
-            config.MotionMagic.MotionMagicAcceleration = Units.degreesToRadians(4500) / WRIST_P_COEFFICIENT;
+            config.MotionMagic.MotionMagicCruiseVelocity = 20;
+            config.MotionMagic.MotionMagicAcceleration = 75;
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
             config.Slot0.kG = 0.0;
             config.Slot0.kS = 0.0;
-            config.Slot0.kV = 0.0;
-            config.Slot0.kA = 0.0;
-            config.Slot0.kP = 0.15;
+            config.Slot0.kV = 0.088;
+            config.Slot0.kA = 0.001;
+            config.Slot0.kP = 0.05;
             config.Slot0.kI = 0.0;
             config.Slot0.kD = 0.0;
 
@@ -233,11 +232,11 @@ public final class Constants {
         public static final double EXTENSION_P_COEFFICIENT =
                 2.0 * Math.PI * EXTENSION_DRUM_RADIUS / EXTENSION_GEAR_RATIO;
         public static final double EXTENSION_MIN_LENGTH = 0;
-        public static final double EXTENSION_MAX_LENGTH = Units.inchesToMeters(40.5);
+        public static final double EXTENSION_MAX_LENGTH = Units.inchesToMeters(42);
         public static final DCMotor EXTENSION_MOTORS = DCMotor.getKrakenX60(3);
 
         public static final double WRIST_P_COEFFICIENT = 2 * Math.PI / WRIST_GEAR_RATIO;
-        public static final double WRIST_MASS_KG = Units.lbsToKilograms(5);
+        public static final double WRIST_MASS_KG = Units.lbsToKilograms(2);
         public static final double WRIST_LENGTH = Units.inchesToMeters(6);
         public static final double WRIST_STARTING_ANGLE = Units.degreesToRadians(125);
         public static final double WRIST_MIN_ANGLE = Units.degreesToRadians(-90);
@@ -247,14 +246,16 @@ public final class Constants {
 
     public static final class EndEffectorConstants {
         public enum EEState {
-            VERTICAL_CORAL_INTAKE(-4, 0.0),
-            VERTICAL_CORAL_OUTTAKE_FWD(-12, 0.0),
-            VERTICAL_CORAL_OUTTAKE_BWD(12, 0.0),
+            VERTICAL_CORAL_INTAKE(-4, 0),
+            VERTICAL_CORAL_OUTTAKE_FWD(-12, 0),
+            VERTICAL_CORAL_OUTTAKE_BWD(12, 0),
             HORIZONTAL_CORAL_INTAKE(-4, 4),
             HORIZONTAL_CORAL_OUTTAKE(2, 2),
-            ALGAE_INTAKE(0.0, 8),
-            ALGAE_OUTTAKE(0.0, -12),
-            OFF(0.0, 0.0);
+            ALGAE_INTAKE(0, 8),
+            ALGAE_OUTTAKE(0, -12),
+            INDEXING_FWD(-2, 0),
+            INDEXING_BWD(2, 0),
+            OFF(0, 0);
 
             public final double leftVolts;
             public final double rightVolts;
@@ -370,8 +371,6 @@ public final class Constants {
         public static final int[] RED_REEF_TAG_IDS = {7, 6, 11, 10, 9, 8};
         public static final int[] RED_CORAL_STATION_TAG_IDS = {1, 2};
         public static final int[] ALL_REEF_TAG_IDS = {18, 19, 20, 21, 22, 17, 7, 6, 11, 10, 9, 8};
-
-        public static final Translation2d BLUE_REEF_CENTER = new Translation2d(4.5, 4);
 
         public static final List<Pose2d> CORAL_STATIONS = new ArrayList<>();
 

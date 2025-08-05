@@ -1,7 +1,9 @@
 package frc.robot.subsystems.endeffector;
 
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.EndEffectorConstants.EEState;
+import java.util.function.BooleanSupplier;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -39,32 +41,50 @@ public class EndEffector extends SubsystemBase {
         io.setTopVolts(state.topVolts);
     }
 
-    public void intake() {
-        if (hasCoral() || hasAlgae()) {
-            state = EEState.OFF;
-        } else if (isCoral) {
-            if (isHorizontal) {
-                state = EEState.HORIZONTAL_CORAL_INTAKE;
+    public Command intake() {
+        return run(() -> {
+            if (hasCoral() || hasAlgae()) {
+                state = EEState.OFF;
+            } else if (isCoral) {
+                if (isHorizontal) {
+                    state = EEState.HORIZONTAL_CORAL_INTAKE;
+                } else {
+                    state = EEState.VERTICAL_CORAL_INTAKE;
+                }
             } else {
-                state = EEState.VERTICAL_CORAL_INTAKE;
+                state = EEState.ALGAE_INTAKE;
             }
-        } else {
-            state = EEState.ALGAE_INTAKE;
-        }
+        });
     }
 
-    public void outtake(boolean isForwards) {
-        if (isCoral) {
-            if (isHorizontal) {
-                state = EEState.HORIZONTAL_CORAL_OUTTAKE;
-            } else if (isForwards) {
-                state = EEState.VERTICAL_CORAL_OUTTAKE_FWD;
+    public Command index(BooleanSupplier isForwardsSupplier) {
+        return run(() -> {
+            boolean isForwards = isForwardsSupplier.getAsBoolean();
+
+            if (isForwards && inputs.backData.isDetected()) {
+                state = EEState.INDEXING_BWD;
+            } else if (!isForwards && inputs.frontData.isDetected()) {
+                state = EEState.INDEXING_FWD;
             } else {
-                state = EEState.VERTICAL_CORAL_OUTTAKE_BWD;
+                state = EEState.OFF;
             }
-        } else {
-            state = EEState.ALGAE_OUTTAKE;
-        }
+        });
+    }
+
+    public Command outtake(BooleanSupplier isForwardsSupplier) {
+        return run(() -> {
+            if (isCoral) {
+                if (isHorizontal) {
+                    state = EEState.HORIZONTAL_CORAL_OUTTAKE;
+                } else if (isForwardsSupplier.getAsBoolean()) {
+                    state = EEState.VERTICAL_CORAL_OUTTAKE_FWD;
+                } else {
+                    state = EEState.VERTICAL_CORAL_OUTTAKE_BWD;
+                }
+            } else {
+                state = EEState.ALGAE_OUTTAKE;
+            }
+        });
     }
 
     public boolean hasCoral() {
