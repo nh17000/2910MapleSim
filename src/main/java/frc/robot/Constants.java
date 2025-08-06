@@ -141,17 +141,17 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 25;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = Units.degreesToRadians(1000) / PIVOT_P_COEFFICIENT;
-            config.MotionMagic.MotionMagicAcceleration = Units.degreesToRadians(600) / PIVOT_P_COEFFICIENT;
+            config.MotionMagic.MotionMagicCruiseVelocity = 50;
+            config.MotionMagic.MotionMagicAcceleration = 50;
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
             config.Slot0.kG = 0.0;
-            config.Slot0.kS = 0.0;
-            config.Slot0.kV = 0.0;
-            config.Slot0.kA = 0.0;
-            config.Slot0.kP = 0.6;
+            config.Slot0.kS = 0.0015;
+            config.Slot0.kV = 2.29 * PIVOT_P_COEFFICIENT;
+            config.Slot0.kA = 0.05 * PIVOT_P_COEFFICIENT; // 0.023-0.084
+            config.Slot0.kP = 0.5;
             config.Slot0.kI = 0.0;
             config.Slot0.kD = 0.0;
 
@@ -166,16 +166,16 @@ public final class Constants {
             config.CurrentLimits.StatorCurrentLimitEnable = true;
             config.CurrentLimits.StatorCurrentLimit = 30;
 
-            config.MotionMagic.MotionMagicCruiseVelocity = Units.inchesToMeters(200) / EXTENSION_P_COEFFICIENT;
-            config.MotionMagic.MotionMagicAcceleration = Units.inchesToMeters(400) / EXTENSION_P_COEFFICIENT;
+            config.MotionMagic.MotionMagicCruiseVelocity = 110;
+            config.MotionMagic.MotionMagicAcceleration = 150;
 
             config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
             config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
             config.Slot0.kG = 0.0;
-            config.Slot0.kS = 0.0;
-            config.Slot0.kV = 0.0;
-            config.Slot0.kA = 0.0;
+            config.Slot0.kS = 0.0045;
+            config.Slot0.kV = 0.1185;
+            config.Slot0.kA = 0.00137;
             config.Slot0.kP = 0.5;
             config.Slot0.kI = 0.0;
             config.Slot0.kD = 0.0;
@@ -222,12 +222,14 @@ public final class Constants {
         public static final double EXTENSION_GEAR_RATIO = (32. / 16.) * (40. / 26.) * (50. / 20.) * (62. / 76.); // 6.28
         public static final double WRIST_GEAR_RATIO = (50. / 9.) * (38. / 12.) * (38. / 12.); // 55.71
 
-        public static final double ARM_MASS_KG = Units.lbsToKilograms(20);
         public static final double ARM_SHOULDER_TO_WRIST_LENGTH = VisualizerConstants.WRIST_OFFSET.getNorm();
 
         public static final double PIVOT_P_COEFFICIENT = 2 * Math.PI / PIVOT_GEAR_RATIO;
         public static final double PIVOT_MIN_ANGLE = 0;
         public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(120);
+        public static final double PIVOT_MASS = Units.lbsToKilograms(32);
+        public static final double PIVOT_MIN_KG = 0.211; // * PIVOT_P_COEFFICIENT; // at min extension
+        public static final double PIVOT_MAX_KG = 0.555; // * PIVOT_P_COEFFICIENT; // at max extension
         public static final DCMotor PIVOT_MOTORS = DCMotor.getKrakenX60(3);
 
         public static final double EXTENSION_DRUM_RADIUS = Units.inchesToMeters(0.25 * 16.0 / Math.PI * 0.5); // ~0.64"
@@ -235,10 +237,12 @@ public final class Constants {
                 2.0 * Math.PI * EXTENSION_DRUM_RADIUS / EXTENSION_GEAR_RATIO;
         public static final double EXTENSION_MIN_LENGTH = 0;
         public static final double EXTENSION_MAX_LENGTH = Units.inchesToMeters(42);
+        public static final double EXTENSION_MASS = Units.lbsToKilograms(17);
+        public static final double EXTENSION_KG = 0.11027;
         public static final DCMotor EXTENSION_MOTORS = DCMotor.getKrakenX60(3);
 
         public static final double WRIST_P_COEFFICIENT = 2 * Math.PI / WRIST_GEAR_RATIO;
-        public static final double WRIST_MASS_KG = Units.lbsToKilograms(2);
+        public static final double WRIST_MASS = Units.lbsToKilograms(2); // 12
         public static final double WRIST_LENGTH = Units.inchesToMeters(6);
         public static final double WRIST_STARTING_ANGLE = Units.degreesToRadians(125);
         public static final double WRIST_MIN_ANGLE = Units.degreesToRadians(-90);
