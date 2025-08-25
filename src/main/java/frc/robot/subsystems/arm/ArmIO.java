@@ -13,9 +13,9 @@ public interface ArmIO {
 
     default void updateInputs(ArmIOInputs inputs) {}
 
-    default void setPivotSetpoint(double setpointRots) {}
+    default void setPivotSetpoint(double setpointRots, double ffVolts) {}
 
-    default void setExtensionSetpoint(double setpointRots) {}
+    default void setExtensionSetpoint(double setpointRots, double ffVolts) {}
 
     default void setWristSetpoint(double setpointRots) {}
 

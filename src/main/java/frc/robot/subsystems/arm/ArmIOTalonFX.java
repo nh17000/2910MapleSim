@@ -46,13 +46,13 @@ public abstract class ArmIOTalonFX implements ArmIO {
     }
 
     @Override
-    public void setPivotSetpoint(double setpointRots) {
-        pivotOne.setControl(pivotMMRequest.withPosition(setpointRots));
+    public void setPivotSetpoint(double setpointRots, double ffVolts) {
+        pivotOne.setControl(pivotMMRequest.withPosition(setpointRots).withFeedForward(ffVolts));
     }
 
     @Override
-    public void setExtensionSetpoint(double setpointRots) {
-        extensionOne.setControl(extensionMMRequest.withPosition(setpointRots));
+    public void setExtensionSetpoint(double setpointRots, double ffVolts) {
+        extensionOne.setControl(extensionMMRequest.withPosition(setpointRots).withFeedForward(ffVolts));
     }
 
     @Override

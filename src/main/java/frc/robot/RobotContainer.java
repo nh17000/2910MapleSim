@@ -218,6 +218,20 @@ public class RobotContainer {
                 .and(() -> arm.getState() != ArmState.NET_PREP)
                 .whileTrue(endEffector.outtake(align::isForwards));
 
+        // controller.leftBumper().onTrue(Commands.runOnce(SignalLogger::start));
+        // controller.rightBumper().onTrue(Commands.runOnce(SignalLogger::stop));
+
+        /*
+         * Joystick Y = quasistatic forward
+         * Joystick A = quasistatic reverse
+         * Joystick B = dynamic forward
+         * Joystick X = dyanmic reverse
+         */
+        // opController.a().whileTrue(arm.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+        // opController.x().whileTrue(arm.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+        // opController.b().whileTrue(arm.sysIdDynamic(SysIdRoutine.Direction.kForward));
+        // opController.y().whileTrue(arm.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+
         // --- Operator Controls ---
         opController.leftBumper().onTrue(new InstantCommand(() -> endEffector.setMode(GamePieceMode.VERTICAL_CORAL)));
         opController.rightBumper().onTrue(new InstantCommand(() -> endEffector.setMode(GamePieceMode.ALGAE)));

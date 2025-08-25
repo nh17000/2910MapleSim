@@ -20,13 +20,13 @@ public class ArmIOSim extends ArmIOTalonFX {
             ArmConstants.ARM_SHOULDER_TO_WRIST_LENGTH,
             ArmConstants.PIVOT_MIN_ANGLE,
             ArmConstants.PIVOT_MAX_ANGLE,
-            ArmConstants.ARM_MASS_KG,
+            ArmConstants.PIVOT_MASS,
             true);
 
     private final TiltedElevatorSim tiltedElevatorSim = new TiltedElevatorSim(
             ArmConstants.EXTENSION_MOTORS,
             ArmConstants.EXTENSION_GEAR_RATIO,
-            ArmConstants.ARM_MASS_KG,
+            ArmConstants.EXTENSION_MASS,
             ArmConstants.EXTENSION_DRUM_RADIUS,
             ArmConstants.EXTENSION_MIN_LENGTH,
             ArmConstants.EXTENSION_MAX_LENGTH,
@@ -35,7 +35,7 @@ public class ArmIOSim extends ArmIOTalonFX {
     private final SingleJointedArmSim wristSim = new SingleJointedArmSim(
             ArmConstants.WRIST_MOTOR,
             ArmConstants.WRIST_GEAR_RATIO,
-            ArmConstants.WRIST_MASS_KG,
+            ArmConstants.WRIST_MASS,
             ArmConstants.WRIST_LENGTH,
             ArmConstants.WRIST_MIN_ANGLE,
             ArmConstants.WRIST_MAX_ANGLE,
@@ -93,7 +93,7 @@ public class ArmIOSim extends ArmIOTalonFX {
 
     @AutoLogOutput(key = "Arm/Estimated MOI")
     private double calcPivotMOI(double extensionLength) {
-        double m = ArmConstants.ARM_MASS_KG;
+        double m = ArmConstants.PIVOT_MASS;
         double r = ArmConstants.ARM_SHOULDER_TO_WRIST_LENGTH + extensionLength;
         return 1.0 / 3.0 * m * r * r;
     }

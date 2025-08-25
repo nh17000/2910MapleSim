@@ -45,7 +45,7 @@ public class EndEffectorIOSim extends EndEffectorIOTalonFX {
 
     private static final double MIN_POS = -0.1;
     private static final double MAX_POS = 0.35;
-    private static final double INTAKE_POS = 0.25;
+    private static final double INTAKE_POS = 0.33;
     private static final double POS_TOLERANCE = 0.01;
 
     private static final double CORAL_LENGTH = Units.inchesToMeters(11.875);
